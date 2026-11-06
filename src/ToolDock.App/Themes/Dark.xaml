@@ -20,10 +20,10 @@
     <SolidColorBrush x:Key="Text.Secondary" Color="#FFB0B0B0" />
     <SolidColorBrush x:Key="Text.Tertiary" Color="#FF787878" />
 
-    <SolidColorBrush x:Key="Accent" Color="#FF22D3EE" />
-    <SolidColorBrush x:Key="Accent.Foreground" Color="#FF082F38" />
-    <SolidColorBrush x:Key="Accent.Hover" Color="#FF67E8F9" />
-    <SolidColorBrush x:Key="Accent.Pressed" Color="#FF0E7490" />
+    <SolidColorBrush x:Key="Accent" Color="#FF4CC2FF" />
+    <SolidColorBrush x:Key="Accent.Foreground" Color="#FF001824" />
+    <SolidColorBrush x:Key="Accent.Hover" Color="#FF63CCFF" />
+    <SolidColorBrush x:Key="Accent.Pressed" Color="#FF38AEF5" />
 
     <SolidColorBrush x:Key="Btn.Background" Color="#FF333333" />
     <SolidColorBrush x:Key="Btn.Background.Hover" Color="#FF404040" />
