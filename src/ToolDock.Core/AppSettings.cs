@@ -11,8 +11,8 @@ public sealed class AppSettings
 {
     public bool AutoStart { get; set; }
 
-    /// <summary>界面主题：Dark（默认）/ Light。</summary>
-    public string Theme { get; set; } = "Dark";
+    /// <summary>界面主题：Light（默认）/ Dark。</summary>
+    public string Theme { get; set; } = "Light";
 
     /// <summary>窗口材质：Mica / Acrylic / Solid。M0 先固定 Mica，设置页 M3 接线。</summary>
     public string Backdrop { get; set; } = "Mica";

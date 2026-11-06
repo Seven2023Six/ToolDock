@@ -2,30 +2,31 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!--
-      浅色调色板（默认主题）：对齐 WinUI 浅色令牌的近似值。
+      浅色调色板：暖白底 + 深青强调色。
+      设计理念：工具坞=码头，青色呼应水域意象，暖白底保持温润。
       键集合与 Dark.xaml 完全一致，ThemeService 整体替换实现切换。
     -->
-    <SolidColorBrush x:Key="Bg.Solid" Color="#FFF3F3F3" />
-    <SolidColorBrush x:Key="Side.Background" Color="#00FFFFFF" />
-    <SolidColorBrush x:Key="Content.Background" Color="#B3FFFFFF" />
-    <SolidColorBrush x:Key="Card.Background" Color="#B3FFFFFF" />
-    <SolidColorBrush x:Key="Card.Stroke" Color="#0F000000" />
-    <SolidColorBrush x:Key="Divider" Color="#0F000000" />
-    <SolidColorBrush x:Key="Nav.Hover" Color="#0A000000" />
+    <SolidColorBrush x:Key="Bg.Solid" Color="#FFFAFAF8" />
+    <SolidColorBrush x:Key="Side.Background" Color="#FFF5F5F0" />
+    <SolidColorBrush x:Key="Content.Background" Color="#00FAFAF8" />
+    <SolidColorBrush x:Key="Card.Background" Color="#FFFFFFFF" />
+    <SolidColorBrush x:Key="Card.Stroke" Color="#0D000000" />
+    <SolidColorBrush x:Key="Divider" Color="#0A000000" />
+    <SolidColorBrush x:Key="Nav.Hover" Color="#0D000000" />
     <SolidColorBrush x:Key="Nav.Checked" Color="#14000000" />
-    <SolidColorBrush x:Key="Ctrl.Background" Color="#14000000" />
+    <SolidColorBrush x:Key="Ctrl.Background" Color="#0D000000" />
 
-    <SolidColorBrush x:Key="Text.Primary" Color="#FF000000" />
-    <SolidColorBrush x:Key="Text.Secondary" Color="#FF5C5C5C" />
-    <SolidColorBrush x:Key="Text.Tertiary" Color="#FF8A8A8A" />
+    <SolidColorBrush x:Key="Text.Primary" Color="#FF1A1A1A" />
+    <SolidColorBrush x:Key="Text.Secondary" Color="#FF6B6B6B" />
+    <SolidColorBrush x:Key="Text.Tertiary" Color="#FF9B9B9B" />
 
-    <SolidColorBrush x:Key="Accent" Color="#FF0078D4" />
+    <SolidColorBrush x:Key="Accent" Color="#FF0891B2" />
     <SolidColorBrush x:Key="Accent.Foreground" Color="#FFFFFFFF" />
-    <SolidColorBrush x:Key="Accent.Hover" Color="#FF1985D4" />
-    <SolidColorBrush x:Key="Accent.Pressed" Color="#FF005BA1" />
+    <SolidColorBrush x:Key="Accent.Hover" Color="#FF0E7490" />
+    <SolidColorBrush x:Key="Accent.Pressed" Color="#FF155E75" />
 
-    <SolidColorBrush x:Key="Btn.Background" Color="#B3FFFFFF" />
-    <SolidColorBrush x:Key="Btn.Background.Hover" Color="#CCFFFFFF" />
-    <SolidColorBrush x:Key="Btn.Background.Pressed" Color="#99FFFFFF" />
-    <SolidColorBrush x:Key="Btn.Stroke" Color="#14000000" />
+    <SolidColorBrush x:Key="Btn.Background" Color="#FFFFFFFF" />
+    <SolidColorBrush x:Key="Btn.Background.Hover" Color="#FFF0F0EE" />
+    <SolidColorBrush x:Key="Btn.Background.Pressed" Color="#FFE5E5E3" />
+    <SolidColorBrush x:Key="Btn.Stroke" Color="#0D000000" />
 </ResourceDictionary>
