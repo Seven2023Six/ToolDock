@@ -7,8 +7,7 @@ using ToolDock.Core;
 namespace ToolDock.App.Views;
 
 /// <summary>
-/// 内存清理页：三组内存信息（物理/系统工作集/页面文件）实时刷新，
-/// 区域勾选/自动清理/免 UAC 均为真功能，配置经管道下发 Agent。
+/// 内存清理页：单条整体内存（实时刷新），区域勾选 / 自动清理 / 立即清理均为真功能。
 /// </summary>
 public partial class MemCleanPage : UserControl
 {
@@ -29,26 +28,15 @@ public partial class MemCleanPage : UserControl
 
     private void RefreshMemory()
     {
-        var groups = CleanupCore.GetMemoryGroups();
+        if (SystemMemory.Read() is not { } memory)
+            return;
 
-        UpdateGroup(PhysUsedCol, PhysUsedText, PhysPctText, PhysSubText, groups.Physical);
-        UpdateGroup(CacheUsedCol, CacheUsedText, CachePctText, CacheSubText, groups.SystemCache);
-        UpdateGroup(PfUsedCol, PfUsedText, PfPctText, PfSubText, groups.PageFile);
-
-        SummaryText.Text = $"物理内存 {groups.Physical.TotalGiB:0.0} GB · 实时刷新";
-    }
-
-    private static void UpdateGroup(
-        System.Windows.Controls.ColumnDefinition used_col,
-        System.Windows.Controls.TextBlock used_text,
-        System.Windows.Controls.TextBlock pct_text,
-        System.Windows.Controls.TextBlock sub_text,
-        CleanupCore.MemoryGroupData group)
-    {
-        used_col.Width = new System.Windows.GridLength(group.Percent, System.Windows.GridUnitType.Star);
-        used_text.Text = $"已用 {group.UsedGiB:0.0} GB";
-        pct_text.Text = group.Percent.ToString();
-        sub_text.Text = $"总 {group.TotalGiB:0.0} GB · 可用 {group.FreeGiB:0.0} GB";
+        SummaryText.Text = $"物理内存 {memory.TotalGiB:0.0} GB · 实时刷新";
+        UsageText.Text = memory.LoadPercent.ToString();
+        // 两列都用星号：比例 = percent : (100 - percent)，进度条才正确
+        UsedColumn.Width = new System.Windows.GridLength(memory.LoadPercent, System.Windows.GridUnitType.Star);
+        FreeColumn.Width = new System.Windows.GridLength(100 - memory.LoadPercent, System.Windows.GridUnitType.Star);
+        MemFootnoteText.Text = $"已用 {memory.UsedGiB:0.0} / {memory.TotalGiB:0.0} GB";
     }
 
     private void LoadState()
@@ -80,7 +68,6 @@ public partial class MemCleanPage : UserControl
         }
 
         SetRegionCheckboxes(mask);
-
         ThresholdToggle.IsChecked = auto_clean;
         IntervalToggle.IsChecked = auto_clean;
         ThresholdBox.Text = threshold.ToString();
@@ -191,18 +178,17 @@ public partial class MemCleanPage : UserControl
         if (AgentLink.Instance.Connected)
         {
             AgentLink.Instance.SendCleanNow();
-            // 清理结果由 Agent 气泡通知
         }
         else
         {
             if (CleanupCore.IsElevated())
             {
                 var result = CleanupCore.Clean(ReadMask());
-                // 提权下正常执行
+                MemFootnoteText.Text = $"已释放 {result.FreedBytes / 1073741824.0:0.00} GB";
             }
             else
             {
-                // 独立模式提示
+                MemFootnoteText.Text = "独立模式无管理员权限，无法清理";
             }
         }
         CleanButton.IsEnabled = true;

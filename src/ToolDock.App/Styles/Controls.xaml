@@ -2,12 +2,10 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!--
-      所有主题相关颜色一律 DynamicResource 引用：ThemeService 运行时替换主题字典，
-      StaticResource 在解析期固化、无法跟随切换。样式之间的引用（与主题无关）仍走 StaticResource。
-      字号体系：VigilWatt 同源紧凑档（2026-11-04 回退，沿用最初观感）。
+      所有主题相关颜色一律 DynamicResource 引用。样式之间的引用走 StaticResource。
+      控件规格严格对齐 WinUI 3 / VigilWatt 源码值。
     -->
 
-    <!-- 卡片语言：与 VigilWatt AppCardStyle 对齐（圆角 8 + 1px 细描边） -->
     <Style x:Key="CardStyle" TargetType="Border">
         <Setter Property="CornerRadius" Value="8" />
         <Setter Property="Background" Value="{DynamicResource Card.Background}" />
@@ -15,12 +13,10 @@
         <Setter Property="BorderThickness" Value="1" />
     </Style>
 
-    <!-- 设置卡片：行内自带 0,12 上下留白，卡片只留 4px 边距 -->
     <Style x:Key="SettingsCardStyle" TargetType="Border" BasedOn="{StaticResource CardStyle}">
         <Setter Property="Padding" Value="16,4" />
     </Style>
 
-    <!-- 页头排版：标题 18 SemiBold + 副标题 12 次级（对齐 AppPageTitleStyle / AppPageSubtitleStyle） -->
     <Style x:Key="PageTitleStyle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="18" />
         <Setter Property="FontWeight" Value="SemiBold" />
@@ -31,8 +27,6 @@
         <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}" />
         <Setter Property="TextTrimming" Value="CharacterEllipsis" />
     </Style>
-
-    <!-- 设置页分节与行语言（VigilWatt SettingsPage 同款） -->
     <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="15" />
         <Setter Property="FontWeight" Value="SemiBold" />
@@ -52,8 +46,6 @@
         <Setter Property="Height" Value="1" />
         <Setter Property="Background" Value="{DynamicResource Divider}" />
     </Style>
-
-    <!-- 通用卡片文字（KPI 卡等） -->
     <Style x:Key="CardLabelStyle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="12" />
         <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}" />
@@ -63,21 +55,18 @@
         <Setter Property="Foreground" Value="{DynamicResource Text.Tertiary}" />
         <Setter Property="TextTrimming" Value="CharacterEllipsis" />
     </Style>
-
-    <!-- 字体图标：WinUI 的 FontIcon 在 WPF 的等价物 -->
     <Style x:Key="GlyphTextBlockStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets" />
     </Style>
 
-    <!-- 侧边栏分组标题：方案 A"分组固定"——小字置灰、不可点，文本来自插件 category -->
+    <!-- 侧边栏分组标题 -->
     <Style x:Key="NavGroupStyle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="10" />
         <Setter Property="Foreground" Value="{DynamicResource Text.Tertiary}" />
         <Setter Property="Margin" Value="17,9,0,3" />
     </Style>
 
-    <!-- 侧边导航项：WinUI NavigationView 观感——36px 高、圆角 4、
-         选中态 = 贴左缘的 3×16 强调胶囊（不加粗文字） -->
+    <!-- 侧边导航项：严格对齐 WinUI NavigationView（36px 高、16px 图标、14px 文字） -->
     <Style x:Key="NavItemStyle" TargetType="RadioButton">
         <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
         <Setter Property="Cursor" Value="Hand" />
@@ -85,9 +74,9 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
-                    <Grid Margin="8,2">
+                    <Grid Margin="4,2">
                         <Border x:Name="ItemBorder" Height="36" CornerRadius="4"
-                                Background="Transparent" Padding="13,0">
+                                Background="Transparent" Padding="12,0">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="{TemplateBinding Tag}"
                                            Style="{StaticResource GlyphTextBlockStyle}"
@@ -96,7 +85,6 @@
                                            Margin="12,0,0,0" VerticalAlignment="Center" />
                             </StackPanel>
                         </Border>
-                        <!-- 选中指示条贴 item 左缘，不占布局宽度 -->
                         <Border x:Name="AccentBar" Width="3" Height="16" CornerRadius="1.5"
                                 Background="{DynamicResource Accent}" HorizontalAlignment="Left"
                                 VerticalAlignment="Center" Opacity="0" />
@@ -115,7 +103,7 @@
         </Setter>
     </Style>
 
-    <!-- 普通按钮：WinUI 标准规格（MinHeight 32 / 圆角 4） -->
+    <!-- 按钮：WinUI 标准规格 -->
     <Style x:Key="AppButtonStyle" TargetType="Button">
         <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
         <Setter Property="Background" Value="{DynamicResource Btn.Background}" />
@@ -150,7 +138,6 @@
         </Setter>
     </Style>
 
-    <!-- 主操作按钮：强调色实底（对齐 WinUI AccentButtonStyle） -->
     <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource AppButtonStyle}">
         <Setter Property="Background" Value="{DynamicResource Accent}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
@@ -181,7 +168,7 @@
         </Setter>
     </Style>
 
-    <!-- 开关：WinUI ToggleSwitch 观感——40×20 轨道 + 12px 圆钮 + 右侧"开/关"状态字 -->
+    <!-- 开关：WinUI ToggleSwitch -->
     <Style x:Key="SwitchStyle" TargetType="ToggleButton">
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Focusable" Value="False" />
@@ -217,7 +204,48 @@
         </Setter>
     </Style>
 
-    <!-- 细滚动条：WinUI 式 8px 覆盖条，替换 WPF 默认的宽滚动条 -->
+    <!-- CheckBox：WinUI 风格（圆角、强调色选中态） -->
+    <Style x:Key="WinUICheckBoxStyle" TargetType="CheckBox">
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <StackPanel Orientation="Horizontal">
+                        <Grid Width="20" Height="20" VerticalAlignment="Center">
+                            <Border x:Name="Box" CornerRadius="4" BorderThickness="1"
+                                    Background="{DynamicResource Ctrl.Background}"
+                                    BorderBrush="{DynamicResource Btn.Stroke}" />
+                            <TextBlock x:Name="CheckMark" Text="&#xE73E;"
+                                       Style="{StaticResource GlyphTextBlockStyle}" FontSize="12"
+                                       Foreground="{DynamicResource Accent.Foreground}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Visibility="Collapsed" />
+                        </Grid>
+                        <ContentPresenter Margin="10,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Box" Property="Background" Value="{DynamicResource Accent}" />
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Accent}" />
+                            <Setter TargetName="CheckMark" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="CheckMark" Property="Foreground" Value="{DynamicResource Accent.Foreground}" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Accent}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 细滚动条 -->
     <Style TargetType="ScrollBar">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Width" Value="8" />
@@ -248,6 +276,40 @@
                         <Trigger Property="Orientation" Value="Horizontal">
                             <Setter Property="Height" Value="8" />
                             <Setter Property="Width" Value="Auto" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- TextBox：WinUI 风格（圆角、主题化边框、聚焦强调色） -->
+    <Style x:Key="WinUITextBoxStyle" TargetType="TextBox">
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+        <Setter Property="Background" Value="{DynamicResource Ctrl.Background}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Btn.Stroke}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="TextAlignment" Value="Center" />
+        <Setter Property="CaretBrush" Value="{DynamicResource Accent}" />
+        <Setter Property="SelectionBrush" Value="{DynamicResource Accent}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="Border" CornerRadius="4" BorderThickness="1"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}">
+                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
+                                      VerticalAlignment="Center" HorizontalAlignment="Stretch" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource Accent}" />
+                            <Setter TargetName="Border" Property="BorderThickness" Value="2" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource Text.Tertiary}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
