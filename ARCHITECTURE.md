@@ -95,7 +95,7 @@ Contracts → Abstractions；**Agent 永不引用 WPF；App 不再使用 WinForm
 | M0.1 壳 + UI（单进程版） | 已被 v0.2 取代 |
 | M0.2 双进程分体 + 主题 + 管道 | ✅ 本次完成并实测 |
 | M1 电量插件（复用 VigilWatt.Core 可行部分，后台轮询在 Agent + 页面在 App） | 待开工 |
-| M2 内存清理插件（等 UAC 方案定案） | 阻塞于 UAC 决策 |
+| M2 内存清理插件 | ✅ 已完成：CleanupCore 进 Core、ElevatedHelper 提权助手（requireAdministrator+AOT）、免 UAC 计划任务、内存页真控件（区域勾选/阈值/定时/立即清理），端到端实测通过 |
 | M3 自启（Agent 写 HKCU Run）、设置页接线、日志完善 | 待开工 |
 
 ## 8. 遗留待决（联动 REQUIREMENTS.md）

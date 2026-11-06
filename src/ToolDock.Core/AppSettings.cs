@@ -17,6 +17,21 @@ public sealed class AppSettings
     /// <summary>窗口材质：Mica / Acrylic / Solid。M0 先固定 Mica，设置页 M3 接线。</summary>
     public string Backdrop { get; set; } = "Mica";
 
+    /// <summary>内存清理：区域掩码（独立模式 / Agent 缺省参考）。</summary>
+    public ulong AutoCleanMask { get; set; } = 0xFB;
+
+    /// <summary>内存清理：自动清理开关。</summary>
+    public bool AutoCleanEnabled { get; set; }
+
+    /// <summary>内存清理：自动清理阈值 %。</summary>
+    public uint AutoCleanThreshold { get; set; } = 90;
+
+    /// <summary>内存清理：定时清理间隔分钟。</summary>
+    public uint AutoCleanIntervalMinutes { get; set; } = 30;
+
+    /// <summary>内存清理：免 UAC 计划任务开关。</summary>
+    public bool AutoCleanSkipUac { get; set; }
+
     private static string DirectoryPath =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ToolDock");
 

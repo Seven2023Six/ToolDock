@@ -20,6 +20,21 @@ public sealed class PipeMessage
     /// <summary>开机自启开关状态（welcome / settings / setAutoStart）。</summary>
     public bool AutoStart { get; set; }
 
+    /// <summary>清理区域掩码（welcome / settings / setCleanCfg）。</summary>
+    public ulong Mask { get; set; }
+
+    /// <summary>自动清理开关（welcome / settings / setCleanCfg）。</summary>
+    public bool AutoClean { get; set; }
+
+    /// <summary>自动清理阈值 %（welcome / settings / setCleanCfg）。</summary>
+    public uint Threshold { get; set; }
+
+    /// <summary>定时清理间隔分钟（welcome / settings / setCleanCfg）。</summary>
+    public uint IntervalM { get; set; }
+
+    /// <summary>免 UAC 计划任务开关（welcome / settings / setCleanCfg）。</summary>
+    public bool SkipUac { get; set; }
+
     /// <summary>开关目标状态（setAutoStart）。</summary>
     public bool Enable { get; set; }
 

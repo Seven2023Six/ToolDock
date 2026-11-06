@@ -8,7 +8,7 @@ namespace ToolDock.Agent;
 /// App 是短命进程：握手（hello → welcome），随后双向收发。
 /// settings.json 的唯一写者在这里——App 的主题变更通过管道送达后落盘。
 /// </summary>
-internal sealed class PipeServer(AppSettings settings, string agentExePath)
+internal sealed class PipeServer(AppSettings settings, string agentExePath, MemoryCleanPlugin? memclean = null)
 {
     private const string PipeName = "tooldock-agent";
 
@@ -72,6 +72,15 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath)
                         Backdrop = settings.Backdrop,
                         AutoStart = settings.AutoStart,
                     };
+                    if (memclean is not null)
+                    {
+                        var (mask, autoclean, threshold, interval, skipuac) = memclean.GetCleanState();
+                        welcome.Mask = mask;
+                        welcome.AutoClean = autoclean;
+                        welcome.Threshold = threshold;
+                        welcome.IntervalM = interval;
+                        welcome.SkipUac = skipuac;
+                    }
                 }
             }
             await PipeFrame.WriteAsync(server, welcome, cancellationToken);
@@ -92,14 +101,26 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath)
                 switch (message.T)
                 {
                     case "getSettings":
-                        await PipeFrame.WriteAsync(server, new PipeMessage
+                    {
+                        var reply = new PipeMessage
                         {
                             T = "settings",
                             Theme = settings.Theme,
                             Backdrop = settings.Backdrop,
                             AutoStart = settings.AutoStart,
-                        }, cancellationToken);
+                        };
+                        if (memclean is not null)
+                        {
+                            var (mask, autoclean, threshold, interval, skipuac) = memclean.GetCleanState();
+                            reply.Mask = mask;
+                            reply.AutoClean = autoclean;
+                            reply.Threshold = threshold;
+                            reply.IntervalM = interval;
+                            reply.SkipUac = skipuac;
+                        }
+                        await PipeFrame.WriteAsync(server, reply, cancellationToken);
                         break;
+                    }
                     case "setTheme":
                         if (message.Theme is "Light" or "Dark")
                         {
@@ -115,6 +136,13 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath)
                             settings.Save();
                             LogFile.Write($"[pipe] 窗口材质已切换并保存：{settings.Backdrop}");
                         }
+                        break;
+                    case "setCleanCfg":
+                        memclean?.ApplyConfig(message.Mask, message.AutoClean, message.Threshold, message.IntervalM, message.SkipUac);
+                        LogFile.Write($"[pipe] 清理配置已更新：mask=0x{message.Mask:X} 自动={message.AutoClean} 阈值={message.Threshold}% 间隔={message.IntervalM}分 免UAC={message.SkipUac}");
+                        break;
+                    case "cleanNow":
+                        memclean?.CleanNowExternal();
                         break;
                     case "setAutoStart":
                         AutoStartManager.Apply(message.Enable, agentExePath);

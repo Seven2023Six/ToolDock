@@ -8,10 +8,9 @@ namespace ToolDock.Agent;
 /// </summary>
 internal sealed class PluginHost
 {
-    private readonly List<IBackgroundPlugin> _plugins = new()
-    {
-        new SamplePlugin(),
-    };
+    private readonly List<IBackgroundPlugin> _plugins = new();
+
+    public void Register(IBackgroundPlugin plugin) => _plugins.Add(plugin);
 
     public void StartAll(TrayIconController tray)
     {

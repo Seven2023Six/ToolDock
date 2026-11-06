@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 提权助手：requireAdministrator 清单 + AOT。接收 Agent 指令执行清理或管理计划任务。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>ToolDock.ElevatedHelper</AssemblyName>
+    <Version>0.3.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ToolDock.Core\ToolDock.Core.csproj" />
+  </ItemGroup>
+
+</Project>

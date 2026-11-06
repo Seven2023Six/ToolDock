@@ -46,9 +46,11 @@ internal static class Program
         _tray.Initialize();
 
         var plugins = new PluginHost();
+        var memclean = new MemoryCleanPlugin();
+        plugins.Register(memclean);
         plugins.StartAll(_tray);
 
-        var pipeServer = new PipeServer(settings, Environment.ProcessPath ?? AppContext.BaseDirectory);
+        var pipeServer = new PipeServer(settings, Environment.ProcessPath ?? AppContext.BaseDirectory, memclean);
         var pipeTask = pipeServer.RunAsync(LifetimeCts.Token);
 
         LogFile.Write("[agent] 启动完成");

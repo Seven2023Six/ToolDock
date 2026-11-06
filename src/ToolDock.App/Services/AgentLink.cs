@@ -28,6 +28,12 @@ internal sealed class AgentLink : IDisposable
     /// <summary>Agent 下发的当前主题（连接成功时有效）。</summary>
     public string? WelcomeTheme { get; private set; }
 
+    public ulong CurrentMask { get; set; } = 0xFB;
+    public bool CurrentAutoClean { get; set; }
+    public uint CurrentThreshold { get; set; } = 90;
+    public uint CurrentIntervalM { get; set; } = 30;
+    public bool CurrentSkipUac { get; set; }
+
     /// <summary>Agent 下发的窗口材质（连接成功时有效），随设置变更更新。</summary>
     public string CurrentBackdrop { get; set; } = "Mica";
 
@@ -75,6 +81,11 @@ internal sealed class AgentLink : IDisposable
             WelcomeTheme = welcome.Theme;
             CurrentBackdrop = welcome.Backdrop ?? "Mica";
             CurrentAutoStart = welcome.AutoStart;
+            CurrentMask = welcome.Mask;
+            CurrentAutoClean = welcome.AutoClean;
+            CurrentThreshold = welcome.Threshold;
+            CurrentIntervalM = welcome.IntervalM;
+            CurrentSkipUac = welcome.SkipUac;
             _ = ReadLoopAsync(pipe);
         }
         catch (TimeoutException)
@@ -172,6 +183,94 @@ internal sealed class AgentLink : IDisposable
                 {
                     _writeGate.Release();
                 }
+            }
+            catch (Exception exception) when (exception is IOException or InvalidOperationException or ObjectDisposedException)
+            {
+                Connected = false;
+            }
+        });
+    }
+
+    /// <summary>清理配置（区域掩码 + 自动策略）下发 Agent（发射后不管）。</summary>
+    public void SendCleanCfg(ulong mask, bool autoClean, uint threshold, uint intervalMinutes)
+    {
+        if (!Connected || _pipe is null)
+        {
+            return;
+        }
+        var pipe = _pipe;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _writeGate.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    await PipeFrame.WriteAsync(pipe, new PipeMessage
+                    {
+                        T = "setCleanCfg",
+                        Mask = mask,
+                        AutoClean = autoClean,
+                        Threshold = threshold,
+                        IntervalM = intervalMinutes,
+                    }, CancellationToken.None).ConfigureAwait(false);
+                }
+                finally
+                {
+                    _writeGate.Release();
+                }
+            }
+            catch (Exception exception) when (exception is IOException or InvalidOperationException or ObjectDisposedException)
+            {
+                Connected = false;
+            }
+        });
+    }
+
+    /// <summary>免 UAC 计划任务开关下发 Agent。</summary>
+    public void SendSkipUac(bool enabled)
+    {
+        if (!Connected || _pipe is null)
+        {
+            return;
+        }
+        var pipe = _pipe;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _writeGate.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    await PipeFrame.WriteAsync(pipe, new PipeMessage { T = "setSkipUac", Enable = enabled }, CancellationToken.None)
+                        .ConfigureAwait(false);
+                }
+                finally
+                {
+                    _writeGate.Release();
+                }
+            }
+            catch (Exception exception) when (exception is IOException or InvalidOperationException or ObjectDisposedException)
+            {
+                Connected = false;
+            }
+        });
+    }
+
+    /// <summary>立即清理指令下发 Agent。</summary>
+    public void SendCleanNow()
+    {
+        if (!Connected || _pipe is null)
+        {
+            return;
+        }
+        var pipe = _pipe;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await PipeFrame.WriteAsync(pipe, new PipeMessage { T = "cleanNow" }, CancellationToken.None)
+                    .ConfigureAwait(false);
             }
             catch (Exception exception) when (exception is IOException or InvalidOperationException or ObjectDisposedException)
             {
