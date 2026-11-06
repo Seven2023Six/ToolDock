@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 契约底层：无任何 UI 依赖（供 Agent / App / 插件共同引用）。
+       一旦有插件落地，接口改动 = 兼容性事件。 -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version>0.2.0</Version>
+  </PropertyGroup>
+
+</Project>

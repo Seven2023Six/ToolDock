@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ToolDock.Abstractions/ToolDock.Abstractions.csproj" />
+    <Project Path="src/ToolDock.Agent/ToolDock.Agent.csproj" />
+    <Project Path="src/ToolDock.App/ToolDock.App.csproj" />
+    <Project Path="src/ToolDock.Contracts/ToolDock.Contracts.csproj" />
+    <Project Path="src/ToolDock.Core/ToolDock.Core.csproj" />
+  </Folder>
+</Solution>

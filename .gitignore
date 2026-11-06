@@ -1,0 +1,11 @@
+# .NET 构建产物
+bin/
+obj/
+.vs/
+publish/
+*.user
+*.suo
+
+# 三个外部参照项目（vigil-watt / memreduct / ViVe）自带各自 git 仓库，
+# 暂不纳入本仓库版本管理；如需纳入请删除下面这行
+Tools/

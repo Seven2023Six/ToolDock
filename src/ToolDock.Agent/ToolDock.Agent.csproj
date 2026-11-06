@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 常驻 Agent：NativeAOT 发布（约 10~15MB 常驻）。
+       开发期 dotnet run / dotnet build 走 JIT，只有 publish 才做 AOT。
+       后台插件在 B2 架构下作为源码编译进本工程（AOT 不支持运行时加载程序集）。 -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- 常驻内存瘦身：非并发 GC、裁剪资源串与堆栈信息、按体积优化 -->
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <StackTraceSupport>false</StackTraceSupport>
+    <OptimizationPreference>Size</OptimizationPreference>
+    <ApplicationIcon>..\..\assets\app.ico</ApplicationIcon>
+    <Version>0.2.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ToolDock.Abstractions\ToolDock.Abstractions.csproj" />
+    <ProjectReference Include="..\ToolDock.Core\ToolDock.Core.csproj" />
+  </ItemGroup>
+
+  <!-- 托盘图标原始像素（由 assets/make-icons.ps1 从 box.png 生成） -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\assets\icon16.bgra"
+                      Link="TrayIconData/icon16.bgra"
+                      LogicalName="ToolDock.Agent.TrayIconData.icon16.bgra" />
+    <EmbeddedResource Include="..\..\assets\icon32.bgra"
+                      Link="TrayIconData/icon32.bgra"
+                      LogicalName="ToolDock.Agent.TrayIconData.icon32.bgra" />
+  </ItemGroup>
+
+</Project>

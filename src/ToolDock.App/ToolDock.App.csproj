@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 按需 GUI：关窗即退，常驻的是 Agent。托盘已迁走，不再需要 WinForms。 -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>ToolDock</AssemblyName>
+    <RootNamespace>ToolDock.App</RootNamespace>
+    <ApplicationIcon>..\..\assets\app.ico</ApplicationIcon>
+    <Version>0.2.0</Version>
+  </PropertyGroup>
+
+  <!-- 界面进程短命（关窗即退），非并发 GC 略降内存开销 -->
+  <PropertyGroup>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ToolDock.Core\ToolDock.Core.csproj" />
+  </ItemGroup>
+
+  <!-- 窗口/任务栏图标：WPF Window.Icon 通过 pack URI 加载 -->
+  <ItemGroup>
+    <Resource Include="..\..\assets\app.ico" Link="app.ico" />
+  </ItemGroup>
+
+</Project>
