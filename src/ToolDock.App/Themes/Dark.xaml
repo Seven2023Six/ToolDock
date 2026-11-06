@@ -2,29 +2,31 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!--
-      深色调色板：对齐 WinUI 深色令牌的近似值（VigilWatt 同源观感）。
-      卡片/侧边栏用半透明白，Mica 材质能透出来；Mica 失败时回退 Bg.Solid 纯色。
+      深色调色板：对齐 ZCode 桌面端深色主题观感。
+      侧边栏深灰 (#252525)，内容区更深 (#1E1E1E)，卡片略浅 (#2D2D2D)。
+      文字白色系，边框极淡，强调色保持蓝。
     -->
-    <SolidColorBrush x:Key="Bg.Solid" Color="#FF202020" />
-    <SolidColorBrush x:Key="Side.Background" Color="#B33A3A3A" />
-    <SolidColorBrush x:Key="Card.Background" Color="#0FFFFFFF" />
-    <SolidColorBrush x:Key="Card.Stroke" Color="#1AFFFFFF" />
-    <SolidColorBrush x:Key="Divider" Color="#14FFFFFF" />
-    <SolidColorBrush x:Key="Nav.Hover" Color="#0FFFFFFF" />
-    <SolidColorBrush x:Key="Nav.Checked" Color="#14FFFFFF" />
-    <SolidColorBrush x:Key="Ctrl.Background" Color="#1FFFFFFF" />
+    <SolidColorBrush x:Key="Bg.Solid" Color="#FF1E1E1E" />
+    <SolidColorBrush x:Key="Side.Background" Color="#FF252525" />
+    <SolidColorBrush x:Key="Content.Background" Color="#FF1E1E1E" />
+    <SolidColorBrush x:Key="Card.Background" Color="#FF2D2D2D" />
+    <SolidColorBrush x:Key="Card.Stroke" Color="#FF3E3E3E" />
+    <SolidColorBrush x:Key="Divider" Color="#FF3E3E3E" />
+    <SolidColorBrush x:Key="Nav.Hover" Color="#FF383838" />
+    <SolidColorBrush x:Key="Nav.Checked" Color="#FF3E3E3E" />
+    <SolidColorBrush x:Key="Ctrl.Background" Color="#FF333333" />
 
     <SolidColorBrush x:Key="Text.Primary" Color="#FFFFFFFF" />
-    <SolidColorBrush x:Key="Text.Secondary" Color="#FFC9C9C9" />
-    <SolidColorBrush x:Key="Text.Tertiary" Color="#FF8A8A8A" />
+    <SolidColorBrush x:Key="Text.Secondary" Color="#FFB0B0B0" />
+    <SolidColorBrush x:Key="Text.Tertiary" Color="#FF787878" />
 
     <SolidColorBrush x:Key="Accent" Color="#FF4CC2FF" />
     <SolidColorBrush x:Key="Accent.Foreground" Color="#FF001824" />
     <SolidColorBrush x:Key="Accent.Hover" Color="#FF63CCFF" />
     <SolidColorBrush x:Key="Accent.Pressed" Color="#FF38AEF5" />
 
-    <SolidColorBrush x:Key="Btn.Background" Color="#12FFFFFF" />
-    <SolidColorBrush x:Key="Btn.Background.Hover" Color="#1FFFFFFF" />
-    <SolidColorBrush x:Key="Btn.Background.Pressed" Color="#0AFFFFFF" />
-    <SolidColorBrush x:Key="Btn.Stroke" Color="#1FFFFFFF" />
+    <SolidColorBrush x:Key="Btn.Background" Color="#FF333333" />
+    <SolidColorBrush x:Key="Btn.Background.Hover" Color="#FF404040" />
+    <SolidColorBrush x:Key="Btn.Background.Pressed" Color="#FF2A2A2A" />
+    <SolidColorBrush x:Key="Btn.Stroke" Color="#FF4A4A4A" />
 </ResourceDictionary>

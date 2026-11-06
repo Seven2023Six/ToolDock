@@ -283,37 +283,17 @@
         </Setter>
     </Style>
 
-    <!-- TextBox：WinUI 风格（圆角、主题化边框、聚焦强调色） -->
+    <!-- TextBox：属性式主题化（不覆盖模板，避免渲染问题） -->
     <Style x:Key="WinUITextBoxStyle" TargetType="TextBox">
         <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
-        <Setter Property="Background" Value="{DynamicResource Ctrl.Background}" />
+        <Setter Property="Background" Value="{DynamicResource Card.Background}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Btn.Stroke}" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="MinHeight" Value="32" />
-        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="Padding" Value="8,6" />
         <Setter Property="TextAlignment" Value="Center" />
         <Setter Property="CaretBrush" Value="{DynamicResource Accent}" />
         <Setter Property="SelectionBrush" Value="{DynamicResource Accent}" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="TextBox">
-                    <Border x:Name="Border" CornerRadius="4" BorderThickness="1"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}">
-                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
-                                      VerticalAlignment="Center" HorizontalAlignment="Stretch" />
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsFocused" Value="True">
-                            <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource Accent}" />
-                            <Setter TargetName="Border" Property="BorderThickness" Value="2" />
-                        </Trigger>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource Text.Tertiary}" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
 </ResourceDictionary>

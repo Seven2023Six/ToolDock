@@ -32,12 +32,15 @@
 
         <!-- 标题栏融入区：背景透明让材质透出，标题靠左，右上留给系统按钮 -->
         <Grid Grid.Row="0" Background="Transparent">
-            <TextBlock Text="工具坞"
-                       Margin="16,0,0,0"
-                       VerticalAlignment="Center"
-                       FontSize="13" FontWeight="SemiBold"
-                       Foreground="{DynamicResource Text.Primary}"
-                       IsHitTestVisible="False" />
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0"
+                        IsHitTestVisible="False">
+                <Image Source="pack://application:,,,/app.ico" Width="16" Height="16" />
+                <TextBlock Text="工具坞"
+                           Margin="8,0,0,0"
+                           VerticalAlignment="Center"
+                           FontSize="13"
+                           Foreground="{DynamicResource Text.Primary}" />
+            </StackPanel>
         </Grid>
 
         <Grid Grid.Row="1">
@@ -95,12 +98,10 @@
                 </Grid>
             </Border>
 
-            <!-- 侧栏与内容区之间的 1px 分隔线（NavigationView DividerStroke 观感） -->
-            <Border Grid.Column="0" Width="1" HorizontalAlignment="Right"
-                    Background="{DynamicResource Divider}" />
-
-            <!-- 页面宿主：插件页面与内置页面装进同一个 ContentControl（快捷面板未来复用同一批页面） -->
-            <ContentControl Grid.Column="1" x:Name="PageHost" />
+            <!-- 内容区：半透明层叠色（侧边栏透明，内容区有色） -->
+            <Border Grid.Column="1" Background="{DynamicResource Content.Background}">
+                <ContentControl x:Name="PageHost" />
+            </Border>
         </Grid>
     </Grid>
 </Window>
