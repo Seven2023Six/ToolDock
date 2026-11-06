@@ -90,6 +90,8 @@ internal static class Program
             var lines = new List<string>
             {
                 $"freed={result.FreedBytes}",
+                $"priv={result.PrivilegeDiag}",
+                $"flush={result.FlushDiag}",
             };
             foreach (var region in result.Regions)
             {

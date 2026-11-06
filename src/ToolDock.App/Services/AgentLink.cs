@@ -28,7 +28,7 @@ internal sealed class AgentLink : IDisposable
     /// <summary>Agent 下发的当前主题（连接成功时有效）。</summary>
     public string? WelcomeTheme { get; private set; }
 
-    public ulong CurrentMask { get; set; } = 0xFB;
+    public ulong CurrentMask { get; set; } = 0xE7;
     public bool CurrentAutoClean { get; set; }
     public uint CurrentThreshold { get; set; } = 90;
     public uint CurrentIntervalM { get; set; } = 30;
