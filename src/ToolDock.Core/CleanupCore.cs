@@ -73,6 +73,64 @@ public static class CleanupCore
         }
     }
 
+    // ---- 三组内存信息（移植自 Mem Reduct _r_sys_getmemoryinfo）----
+
+    public sealed record MemoryGroupData(string Name, ulong TotalBytes, ulong FreeBytes, ulong UsedBytes, uint Percent)
+    {
+        public double UsedGiB => UsedBytes / 1073741824.0;
+        public double FreeGiB => FreeBytes / 1073741824.0;
+        public double TotalGiB => TotalBytes / 1073741824.0;
+    }
+
+    public sealed record MemoryGroupsInfo(MemoryGroupData Physical, MemoryGroupData SystemCache, MemoryGroupData PageFile);
+
+    private const int SystemBasicInformation = 0;
+    private const int SystemPerformanceInformation = 2;
+    private const int SystemPageFileInformation = 18;
+    private const int SystemFileCacheInformation = 21;
+
+    public static MemoryGroupsInfo GetMemoryGroups()
+    {
+        // 物理 + 页面文件：GlobalMemoryStatusEx（可靠来源）
+        var st = new NativeMemoryStatus();
+        GlobalMemoryStatusEx(st);
+
+        ulong total_phys = st.UllTotalPhys;
+        ulong free_phys = st.UllAvailPhys;
+        ulong used_phys = total_phys > free_phys ? total_phys - free_phys : 0;
+        uint phys_pct = total_phys > 0 ? (uint)(used_phys * 100 / total_phys) : 0;
+        var physical = new MemoryGroupData("物理内存", total_phys, free_phys, used_phys, phys_pct);
+
+        ulong total_pf = st.UllTotalPageFile;
+        ulong used_pf = total_pf > st.UllAvailPageFile ? total_pf - st.UllAvailPageFile : 0;
+        uint pf_pct = total_pf > 0 ? (uint)(used_pf * 100 / total_pf) : 0;
+        var pagefile = new MemoryGroupData("页面文件", total_pf, st.UllAvailPageFile, used_pf, pf_pct);
+
+        // 系统工作集：NtQuerySystemInformation(SystemFileCacheInformation)
+        ulong cache_used = 0, cache_peak = 0;
+        {
+            var sfci = new SystemFilecacheInformation();
+            int sz = Marshal.SizeOf<SystemFilecacheInformation>();
+            var buf = Marshal.AllocHGlobal(sz);
+            try
+            {
+                NativeMethods.RtlZeroMemory(buf, sz);
+                if (NativeMethods.NtQuerySystemInformation(SystemFileCacheInformation, buf, (uint)sz, out _) == 0)
+                {
+                    cache_used = (ulong)Marshal.ReadInt64(buf, 0);
+                    cache_peak = (ulong)Marshal.ReadInt64(buf, 8);
+                }
+            }
+            finally { Marshal.FreeHGlobal(buf); }
+
+            ulong cache_total = cache_peak > cache_used ? cache_peak : cache_used;
+            uint cache_pct = cache_total > 0 ? (uint)(cache_used * 100 / cache_total) : 0;
+            var cache = new MemoryGroupData("系统工作集", cache_total, cache_total - cache_used, cache_used, cache_pct);
+
+            return new MemoryGroupsInfo(physical, cache, pagefile);
+        }
+    }
+
     /// <summary>执行清理。返回各区域状态与诊断信息。</summary>
     public static CleanupResult Clean(ulong mask)
     {
@@ -88,7 +146,7 @@ public static class CleanupCore
         if ((mask & RegionWorkingSet) != 0)
         {
             int command = CmdEmptyWorkingSets;
-            regions.Add(new RegionResult("工作集", NativeMethods.NtSetSystemInformation(SystemMemoryListInformation, ref command, sizeof(int))));
+            regions.Add(new RegionResult("工作集", NativeMethods.NtSetSystemInformation(SystemMemoryListInformation, ref command, (uint)sizeof(int))));
         }
 
         // 系统文件缓存（SeIncreaseQuotaPrivilege）
@@ -106,21 +164,21 @@ public static class CleanupCore
         if ((mask & RegionModifiedList) != 0)
         {
             int command = CmdFlushModifiedList;
-            regions.Add(new RegionResult("已修改页面列表", NativeMethods.NtSetSystemInformation(SystemMemoryListInformation, ref command, sizeof(int))));
+            regions.Add(new RegionResult("已修改页面列表", NativeMethods.NtSetSystemInformation(SystemMemoryListInformation, ref command, (uint)sizeof(int))));
         }
 
         // 备用列表
         if ((mask & RegionStandbyList) != 0)
         {
             int command = CmdPurgeStandbyList;
-            regions.Add(new RegionResult("备用列表", NativeMethods.NtSetSystemInformation(SystemMemoryListInformation, ref command, sizeof(int))));
+            regions.Add(new RegionResult("备用列表", NativeMethods.NtSetSystemInformation(SystemMemoryListInformation, ref command, (uint)sizeof(int))));
         }
 
         // 备用列表（无优先级）
         if ((mask & RegionStandbyPriority0) != 0)
         {
             int command = CmdPurgeLowPriorityStandbyList;
-            regions.Add(new RegionResult("备用列表（无优先级）", NativeMethods.NtSetSystemInformation(SystemMemoryListInformation, ref command, sizeof(int))));
+            regions.Add(new RegionResult("备用列表（无优先级）", NativeMethods.NtSetSystemInformation(SystemMemoryListInformation, ref command, (uint)sizeof(int))));
         }
 
         // 已修改文件缓存：刷新各卷缓存
@@ -291,6 +349,12 @@ public static class CleanupCore
 
         [DllImport("ntdll.dll")]
         public static extern uint NtSetSystemInformation(int info_class, IntPtr buffer, uint size);
+
+        [DllImport("ntdll.dll")]
+        public static extern int NtQuerySystemInformation(int info_class, IntPtr buffer, uint size, out int returned_size);
+
+        [DllImport("kernel32.dll")]
+        public static extern void RtlZeroMemory(IntPtr dest, int count);
 
         [DllImport("ntdll.dll")]
         public static extern int NtOpenProcessToken(IntPtr process, uint desired_access, out IntPtr token);

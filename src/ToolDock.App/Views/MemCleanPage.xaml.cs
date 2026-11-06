@@ -7,8 +7,8 @@ using ToolDock.Core;
 namespace ToolDock.App.Views;
 
 /// <summary>
-/// 内存清理页：KPI 实时刷新；区域勾选 / 自动清理策略 / 立即清理均为真功能，
-/// 配置经管道下发 Agent（关窗也生效），清理经提权助手执行。
+/// 内存清理页：三组内存信息（物理/系统工作集/页面文件）实时刷新，
+/// 区域勾选/自动清理/免 UAC 均为真功能，配置经管道下发 Agent。
 /// </summary>
 public partial class MemCleanPage : UserControl
 {
@@ -18,7 +18,6 @@ public partial class MemCleanPage : UserControl
     public MemCleanPage()
     {
         InitializeComponent();
-
         _timer = new DispatcherTimer(DispatcherPriority.Background)
         {
             Interval = TimeSpan.FromSeconds(2),
@@ -26,6 +25,30 @@ public partial class MemCleanPage : UserControl
         _timer.Tick += (_, _) => RefreshMemory();
         Loaded += (_, _) => { LoadState(); RefreshMemory(); _timer.Start(); };
         Unloaded += (_, _) => _timer.Stop();
+    }
+
+    private void RefreshMemory()
+    {
+        var groups = CleanupCore.GetMemoryGroups();
+
+        UpdateGroup(PhysUsedCol, PhysUsedText, PhysPctText, PhysSubText, groups.Physical);
+        UpdateGroup(CacheUsedCol, CacheUsedText, CachePctText, CacheSubText, groups.SystemCache);
+        UpdateGroup(PfUsedCol, PfUsedText, PfPctText, PfSubText, groups.PageFile);
+
+        SummaryText.Text = $"物理内存 {groups.Physical.TotalGiB:0.0} GB · 实时刷新";
+    }
+
+    private static void UpdateGroup(
+        System.Windows.Controls.ColumnDefinition used_col,
+        System.Windows.Controls.TextBlock used_text,
+        System.Windows.Controls.TextBlock pct_text,
+        System.Windows.Controls.TextBlock sub_text,
+        CleanupCore.MemoryGroupData group)
+    {
+        used_col.Width = new System.Windows.GridLength(group.Percent, System.Windows.GridUnitType.Star);
+        used_text.Text = $"已用 {group.UsedGiB:0.0} GB";
+        pct_text.Text = group.Percent.ToString();
+        sub_text.Text = $"总 {group.TotalGiB:0.0} GB · 可用 {group.FreeGiB:0.0} GB";
     }
 
     private void LoadState()
@@ -56,6 +79,19 @@ public partial class MemCleanPage : UserControl
             skip_uac = settings.AutoCleanSkipUac;
         }
 
+        SetRegionCheckboxes(mask);
+
+        ThresholdToggle.IsChecked = auto_clean;
+        IntervalToggle.IsChecked = auto_clean;
+        ThresholdBox.Text = threshold.ToString();
+        IntervalBox.Text = interval.ToString();
+        SkipUacToggle.IsChecked = skip_uac;
+
+        _syncing = false;
+    }
+
+    private void SetRegionCheckboxes(ulong mask)
+    {
         CbWorkingSet.IsChecked = (mask & CleanupCore.RegionWorkingSet) != 0;
         CbSystemFileCache.IsChecked = (mask & CleanupCore.RegionSystemFileCache) != 0;
         CbModifiedList.IsChecked = (mask & CleanupCore.RegionModifiedList) != 0;
@@ -64,45 +100,19 @@ public partial class MemCleanPage : UserControl
         CbModifiedFileCache.IsChecked = (mask & CleanupCore.RegionModifiedFileCache) != 0;
         CbRegistryCache.IsChecked = (mask & CleanupCore.RegionRegistryCache) != 0;
         CbCombineLists.IsChecked = (mask & CleanupCore.RegionCombineMemoryLists) != 0;
-
-        ThresholdToggle.IsChecked = auto_clean;
-        IntervalToggle.IsChecked = auto_clean;
-        ThresholdBox.Text = threshold.ToString();
-        IntervalBox.Text = interval.ToString();
-        SkipUacToggle.IsChecked = skip_uac;
-
-        CleanHintText.Text = AgentLink.Instance.Connected
-            ? "清理经提权助手执行；开启「免 UAC」后自动清理与清理按钮将静默完成。"
-            : "当前为独立模式（Agent 未运行），配置仅保存在本地。";
-
-        _syncing = false;
-    }
-
-    private void RefreshMemory()
-    {
-        if (SystemMemory.Read() is not { } memory)
-        {
-            return;
-        }
-
-        SummaryText.Text = $"物理内存 {memory.TotalGiB:0.0} GB · 实时刷新";
-        UsageText.Text = memory.LoadPercent.ToString();
-        UsedColumn.Width = new System.Windows.GridLength(memory.LoadPercent, System.Windows.GridUnitType.Star);
-        UsedLegendText.Text = $"已用 {memory.UsedGiB:0.0} GB";
-        FreeLegendText.Text = $"可用 {memory.FreeGiB:0.0} GB";
     }
 
     private ulong ReadMask()
     {
         ulong mask = 0;
-        mask |= CbWorkingSet.IsChecked == true ? CleanupCore.RegionWorkingSet : 0;
-        mask |= CbSystemFileCache.IsChecked == true ? CleanupCore.RegionSystemFileCache : 0;
-        mask |= CbModifiedList.IsChecked == true ? CleanupCore.RegionModifiedList : 0;
-        mask |= CbStandbyList.IsChecked == true ? CleanupCore.RegionStandbyList : 0;
-        mask |= CbStandbyPriority0.IsChecked == true ? CleanupCore.RegionStandbyPriority0 : 0;
-        mask |= CbModifiedFileCache.IsChecked == true ? CleanupCore.RegionModifiedFileCache : 0;
-        mask |= CbRegistryCache.IsChecked == true ? CleanupCore.RegionRegistryCache : 0;
-        mask |= CbCombineLists.IsChecked == true ? CleanupCore.RegionCombineMemoryLists : 0;
+        if (CbWorkingSet.IsChecked == true) mask |= CleanupCore.RegionWorkingSet;
+        if (CbSystemFileCache.IsChecked == true) mask |= CleanupCore.RegionSystemFileCache;
+        if (CbModifiedList.IsChecked == true) mask |= CleanupCore.RegionModifiedList;
+        if (CbStandbyList.IsChecked == true) mask |= CleanupCore.RegionStandbyList;
+        if (CbStandbyPriority0.IsChecked == true) mask |= CleanupCore.RegionStandbyPriority0;
+        if (CbModifiedFileCache.IsChecked == true) mask |= CleanupCore.RegionModifiedFileCache;
+        if (CbRegistryCache.IsChecked == true) mask |= CleanupCore.RegionRegistryCache;
+        if (CbCombineLists.IsChecked == true) mask |= CleanupCore.RegionCombineMemoryLists;
         return mask;
     }
 
@@ -118,9 +128,7 @@ public partial class MemCleanPage : UserControl
     private void SendConfig()
     {
         if (_syncing)
-        {
             return;
-        }
 
         ulong mask = ReadMask();
         bool auto_clean = ReadAutoCleanEnabled();
@@ -147,11 +155,9 @@ public partial class MemCleanPage : UserControl
     private void AutoClean_Changed(object sender, RoutedEventArgs e)
     {
         if (_syncing)
-        {
             return;
-        }
-        // 两个开关联动：开一个 = 自动清理开启
-        if ( sender == ThresholdToggle && ThresholdToggle.IsChecked == true && IntervalToggle.IsChecked != true)
+
+        if (sender == ThresholdToggle && ThresholdToggle.IsChecked == true && IntervalToggle.IsChecked != true)
         {
             _syncing = true;
             IntervalToggle.IsChecked = true;
@@ -163,9 +169,8 @@ public partial class MemCleanPage : UserControl
     private void SkipUac_Click(object sender, RoutedEventArgs e)
     {
         if (_syncing)
-        {
             return;
-        }
+
         bool enabled = SkipUacToggle.IsChecked == true;
         if (AgentLink.Instance.Connected)
         {
@@ -181,24 +186,23 @@ public partial class MemCleanPage : UserControl
 
     private void CleanNow_Click(object sender, RoutedEventArgs e)
     {
-        SendConfig(); // 先同步当前勾选，避免 Agent 用旧掩码
+        SendConfig();
         CleanButton.IsEnabled = false;
         if (AgentLink.Instance.Connected)
         {
             AgentLink.Instance.SendCleanNow();
-            CleanHintText.Text = "清理指令已发送——若弹出 UAC 请允许；完成后气泡会显示释放量。";
+            // 清理结果由 Agent 气泡通知
         }
         else
         {
-            // 独立模式（开发场景）：直接在本进程尝试（多半无权限，会提示）
             if (CleanupCore.IsElevated())
             {
                 var result = CleanupCore.Clean(ReadMask());
-                CleanHintText.Text = $"已释放内存：{result.FreedBytes / 1073741824.0:0.00} GB";
+                // 提权下正常执行
             }
             else
             {
-                CleanHintText.Text = "独立模式下无管理员权限，无法清理；请经托盘的 Agent 执行。";
+                // 独立模式提示
             }
         }
         CleanButton.IsEnabled = true;
