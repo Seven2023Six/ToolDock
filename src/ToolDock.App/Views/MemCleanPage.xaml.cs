@@ -48,6 +48,8 @@ public partial class MemCleanPage : UserControl
         uint threshold;
         uint interval;
         bool skip_uac;
+        bool allow_freezes;
+        bool confirm_clean;
 
         if (AgentLink.Instance.Connected)
         {
@@ -56,6 +58,8 @@ public partial class MemCleanPage : UserControl
             threshold = AgentLink.Instance.CurrentThreshold;
             interval = AgentLink.Instance.CurrentIntervalM;
             skip_uac = AgentLink.Instance.CurrentSkipUac;
+            allow_freezes = AgentLink.Instance.CurrentAllowFreezes;
+            confirm_clean = AgentLink.Instance.CurrentConfirmClean;
         }
         else
         {
@@ -65,6 +69,8 @@ public partial class MemCleanPage : UserControl
             threshold = settings.AutoCleanThreshold;
             interval = settings.AutoCleanIntervalMinutes;
             skip_uac = settings.AutoCleanSkipUac;
+            allow_freezes = settings.AutoCleanAllowFreezes;
+            confirm_clean = settings.AutoCleanConfirm;
         }
 
         SetRegionCheckboxes(mask);
@@ -73,6 +79,8 @@ public partial class MemCleanPage : UserControl
         ThresholdBox.Text = threshold.ToString();
         IntervalBox.Text = interval.ToString();
         SkipUacToggle.IsChecked = skip_uac;
+        AllowFreezesToggle.IsChecked = allow_freezes;
+        ConfirmCleanToggle.IsChecked = confirm_clean;
 
         _syncing = false;
     }
@@ -121,10 +129,12 @@ public partial class MemCleanPage : UserControl
         bool auto_clean = ReadAutoCleanEnabled();
         uint threshold = ReadThreshold();
         uint interval = ReadInterval();
+        bool allow_freezes = AllowFreezesToggle.IsChecked == true;
+        bool confirm_clean = ConfirmCleanToggle.IsChecked == true;
 
         if (AgentLink.Instance.Connected)
         {
-            AgentLink.Instance.SendCleanCfg(mask, auto_clean, threshold, interval);
+            AgentLink.Instance.SendCleanCfg(mask, auto_clean, threshold, interval, allow_freezes, confirm_clean);
         }
         else
         {
@@ -133,6 +143,8 @@ public partial class MemCleanPage : UserControl
             settings.AutoCleanEnabled = auto_clean;
             settings.AutoCleanThreshold = threshold;
             settings.AutoCleanIntervalMinutes = interval;
+            settings.AutoCleanAllowFreezes = allow_freezes;
+            settings.AutoCleanConfirm = confirm_clean;
             settings.Save();
         }
     }
@@ -171,13 +183,54 @@ public partial class MemCleanPage : UserControl
         }
     }
 
+    private void AllowFreezes_Click(object sender, RoutedEventArgs e)
+    {
+        SendConfig();
+    }
+
+    private void ConfirmClean_Click(object sender, RoutedEventArgs e)
+    {
+        SendConfig();
+    }
+
+    /// <summary>清理前确认框正文：列出所选区域（对齐 Mem Reduct SOURCE_MANUAL 清单文案）。</summary>
+    private string BuildConfirmText()
+    {
+        var lines = new List<string>();
+        void Add(CheckBox box)
+        {
+            if (box.IsChecked == true)
+            {
+                lines.Add("- " + box.Content);
+            }
+        }
+        Add(CbWorkingSet);
+        Add(CbSystemFileCache);
+        Add(CbModifiedList);
+        Add(CbStandbyList);
+        Add(CbStandbyPriority0);
+        Add(CbModifiedFileCache);
+        Add(CbRegistryCache);
+        Add(CbCombineLists);
+        return lines.Count == 0 ? "未选择任何区域" : "即将清理以下内存区域：\r\n" + string.Join("\r\n", lines) + "\r\n\r\n确定继续吗？";
+    }
+
     private void CleanNow_Click(object sender, RoutedEventArgs e)
     {
         SendConfig();
+        if (ConfirmCleanToggle.IsChecked == true)
+        {
+            if (MessageBox.Show(BuildConfirmText(), "工具坞 · 内存清理",
+                    MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK)
+            {
+                return;
+            }
+        }
+
         CleanButton.IsEnabled = false;
         if (AgentLink.Instance.Connected)
         {
-            AgentLink.Instance.SendCleanNow();
+            AgentLink.Instance.SendCleanNow(confirmed: true);
         }
         else
         {

@@ -44,7 +44,38 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Memo
     {
         try
         {
-            var hello = await PipeFrame.ReadAsync(server, cancellationToken);
+            await HandleClientCoreAsync(server, cancellationToken);
+        }
+        catch (IOException)
+        {
+            // 管道断开属于常态（App 关窗即退）
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            // 任何其他异常都要留痕：连接层问题不能无声消失
+            LogFile.Write($"[pipe] 客户端处理异常：{exception.GetType().Name}: {exception.Message}");
+        }
+        finally
+        {
+            // 连接结束时务必清空引用：否则死连接滞留会让后续新连接误判 duplicate
+            lock (_gate)
+            {
+                if (ReferenceEquals(_appConnection, server))
+                {
+                    _appConnection = null;
+                }
+            }
+            server.Dispose();
+            MemoryTrim.TrimCurrent(); // 客户端断开后回收工作集
+        }
+    }
+
+    private async Task HandleClientCoreAsync(NamedPipeServerStream server, CancellationToken cancellationToken)
+    {
+        var hello = await PipeFrame.ReadAsync(server, cancellationToken);
             if (hello is not { T: "hello" })
             {
                 LogFile.Write($"[pipe] 客户端握手无效（hello={hello?.T ?? "null"}），断开");
@@ -74,12 +105,14 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Memo
                     };
                     if (memclean is not null)
                     {
-                        var (mask, autoclean, threshold, interval, skipuac) = memclean.GetCleanState();
+                        var (mask, autoclean, threshold, interval, skipuac, allowfreezes, confirmclean) = memclean.GetCleanState();
                         welcome.Mask = mask;
                         welcome.AutoClean = autoclean;
                         welcome.Threshold = threshold;
                         welcome.IntervalM = interval;
                         welcome.SkipUac = skipuac;
+                        welcome.AllowFreezes = allowfreezes;
+                        welcome.ConfirmClean = confirmclean;
                     }
                 }
             }
@@ -111,12 +144,14 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Memo
                         };
                         if (memclean is not null)
                         {
-                            var (mask, autoclean, threshold, interval, skipuac) = memclean.GetCleanState();
+                            var (mask, autoclean, threshold, interval, skipuac, allowfreezes, confirmclean) = memclean.GetCleanState();
                             reply.Mask = mask;
                             reply.AutoClean = autoclean;
                             reply.Threshold = threshold;
                             reply.IntervalM = interval;
                             reply.SkipUac = skipuac;
+                            reply.AllowFreezes = allowfreezes;
+                            reply.ConfirmClean = confirmclean;
                         }
                         await PipeFrame.WriteAsync(server, reply, cancellationToken);
                         break;
@@ -138,11 +173,11 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Memo
                         }
                         break;
                     case "setCleanCfg":
-                        memclean?.ApplyConfig(message.Mask, message.AutoClean, message.Threshold, message.IntervalM, message.SkipUac);
-                        LogFile.Write($"[pipe] 清理配置已更新：mask=0x{message.Mask:X} 自动={message.AutoClean} 阈值={message.Threshold}% 间隔={message.IntervalM}分 免UAC={message.SkipUac}");
+                        memclean?.ApplyConfig(message.Mask, message.AutoClean, message.Threshold, message.IntervalM, message.SkipUac, message.AllowFreezes, message.ConfirmClean);
+                        LogFile.Write($"[pipe] 清理配置已更新：mask=0x{message.Mask:X} 自动={message.AutoClean} 阈值={message.Threshold}% 间隔={message.IntervalM}分 免UAC={message.SkipUac} 自动含冻结区={message.AllowFreezes} 清理确认={message.ConfirmClean}");
                         break;
                     case "cleanNow":
-                        memclean?.CleanNowExternal();
+                        memclean?.CleanNowExternal(message.Confirmed);
                         break;
                     case "setAutoStart":
                         AutoStartManager.Apply(message.Enable, agentExePath);
@@ -152,30 +187,5 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Memo
                         break;
                 }
             }
-        }
-        catch (IOException)
-        {
-            // 管道断开属于常态（App 关窗即退）
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        catch (Exception exception)
-        {
-            // 任何其他异常都要留痕：连接层问题不能无声消失
-            LogFile.Write($"[pipe] 客户端处理异常：{exception.GetType().Name}: {exception.Message}");
-        }
-        finally
-        {
-            lock (_gate)
-            {
-                if (ReferenceEquals(_appConnection, server))
-                {
-                    _appConnection = null;
-                }
-            }
-            server.Dispose();
-            MemoryTrim.TrimCurrent(); // 客户端断开后回收工作集
-        }
     }
 }

@@ -55,6 +55,10 @@ internal sealed class JsonFileSettingsStore(string pluginId) : ISettingsStore
                 {
                     return (T)(object)i;
                 }
+                if (value.TryGetValue<uint>(out var u) && typeof(T) == typeof(uint))
+                {
+                    return (T)(object)u;
+                }
                 if (value.TryGetValue<long>(out var l) && typeof(T) == typeof(long))
                 {
                     return (T)(object)l;
@@ -81,10 +85,11 @@ internal sealed class JsonFileSettingsStore(string pluginId) : ISettingsStore
                 null => null,
                 bool v => JsonValue.Create(v),
                 int v => JsonValue.Create(v),
+                uint v => JsonValue.Create(v),
                 long v => JsonValue.Create(v),
                 double v => JsonValue.Create(v),
                 string v => JsonValue.Create(v),
-                _ => throw new NotSupportedException("插件设置仅支持 bool/int/long/double/string"),
+                _ => throw new NotSupportedException("插件设置仅支持 bool/int/uint/long/double/string"),
             };
         }
     }

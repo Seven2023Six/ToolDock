@@ -35,6 +35,15 @@ public sealed class PipeMessage
     /// <summary>免 UAC 计划任务开关（welcome / settings / setCleanCfg）。</summary>
     public bool SkipUac { get; set; }
 
+    /// <summary>自动清理时包含冻结区（备用/已修改列表）。对齐 Mem Reduct IsAllowStandbyListCleanup，默认 false（welcome / setCleanCfg）。</summary>
+    public bool AllowFreezes { get; set; }
+
+    /// <summary>手动清理前弹出确认（welcome / setCleanCfg）。对齐 Mem Reduct IsShowReductConfirmation，默认 true。</summary>
+    public bool ConfirmClean { get; set; }
+
+    /// <summary>cleanNow：发起方是否已确认。true 跳过 Agent 端确认框（App 已确认）。</summary>
+    public bool Confirmed { get; set; }
+
     /// <summary>开关目标状态（setAutoStart）。</summary>
     public bool Enable { get; set; }
 

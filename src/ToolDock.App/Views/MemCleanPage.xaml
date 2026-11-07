@@ -119,6 +119,32 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="自动清理时包含冻结区" Style="{StaticResource RowTitleStyle}" />
+                                <TextBlock Text="勾选后自动清理也处理备用列表 / 已修改页面列表" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <ToggleButton Grid.Column="1" x:Name="AllowFreezesToggle" Style="{StaticResource SwitchStyle}"
+                                          Click="AllowFreezes_Click" VerticalAlignment="Center" />
+                        </Grid>
+                        <Border Style="{StaticResource RowDividerStyle}" />
+                        <Grid Margin="0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="清理前确认" Style="{StaticResource RowTitleStyle}" />
+                                <TextBlock Text="手动清理前列出所选区域并请求确认" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <ToggleButton Grid.Column="1" x:Name="ConfirmCleanToggle" Style="{StaticResource SwitchStyle}"
+                                          Click="ConfirmClean_Click" VerticalAlignment="Center" />
+                        </Grid>
+                        <Border Style="{StaticResource RowDividerStyle}" />
+                        <Grid Margin="0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                 <TextBlock Text="免 UAC 提权" Style="{StaticResource RowTitleStyle}" />
                                 <TextBlock Text="通过计划任务静默执行清理，不弹 UAC" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
                             </StackPanel>

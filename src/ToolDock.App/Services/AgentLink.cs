@@ -33,6 +33,8 @@ internal sealed class AgentLink : IDisposable
     public uint CurrentThreshold { get; set; } = 90;
     public uint CurrentIntervalM { get; set; } = 30;
     public bool CurrentSkipUac { get; set; }
+    public bool CurrentAllowFreezes { get; set; }
+    public bool CurrentConfirmClean { get; set; } = true;
 
     /// <summary>Agent 下发的窗口材质（连接成功时有效），随设置变更更新。</summary>
     public string CurrentBackdrop { get; set; } = "Mica";
@@ -86,6 +88,8 @@ internal sealed class AgentLink : IDisposable
             CurrentThreshold = welcome.Threshold;
             CurrentIntervalM = welcome.IntervalM;
             CurrentSkipUac = welcome.SkipUac;
+            CurrentAllowFreezes = welcome.AllowFreezes;
+            CurrentConfirmClean = welcome.ConfirmClean;
             _ = ReadLoopAsync(pipe);
         }
         catch (TimeoutException)
@@ -192,7 +196,7 @@ internal sealed class AgentLink : IDisposable
     }
 
     /// <summary>清理配置（区域掩码 + 自动策略）下发 Agent（发射后不管）。</summary>
-    public void SendCleanCfg(ulong mask, bool autoClean, uint threshold, uint intervalMinutes)
+    public void SendCleanCfg(ulong mask, bool autoClean, uint threshold, uint intervalMinutes, bool allowFreezes, bool confirmClean)
     {
         if (!Connected || _pipe is null)
         {
@@ -213,6 +217,8 @@ internal sealed class AgentLink : IDisposable
                         AutoClean = autoClean,
                         Threshold = threshold,
                         IntervalM = intervalMinutes,
+                        AllowFreezes = allowFreezes,
+                        ConfirmClean = confirmClean,
                     }, CancellationToken.None).ConfigureAwait(false);
                 }
                 finally
@@ -257,8 +263,8 @@ internal sealed class AgentLink : IDisposable
         });
     }
 
-    /// <summary>立即清理指令下发 Agent。</summary>
-    public void SendCleanNow()
+    /// <summary>立即清理指令下发 Agent（confirmed=true 表示 App 端已弹过确认框）。</summary>
+    public void SendCleanNow(bool confirmed)
     {
         if (!Connected || _pipe is null)
         {
@@ -269,7 +275,7 @@ internal sealed class AgentLink : IDisposable
         {
             try
             {
-                await PipeFrame.WriteAsync(pipe, new PipeMessage { T = "cleanNow" }, CancellationToken.None)
+                await PipeFrame.WriteAsync(pipe, new PipeMessage { T = "cleanNow", Confirmed = confirmed }, CancellationToken.None)
                     .ConfigureAwait(false);
             }
             catch (Exception exception) when (exception is IOException or InvalidOperationException or ObjectDisposedException)
