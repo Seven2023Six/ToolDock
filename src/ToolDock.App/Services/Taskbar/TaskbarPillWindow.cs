@@ -77,6 +77,10 @@ public sealed class TaskbarPillWindow : IDisposable
     /// <summary>窗口仍有效（未销毁）。供协调层快速路径判断。</summary>
     public bool IsWindowValid => _hwnd != IntPtr.Zero && Native.IsWindow(_hwnd);
 
+    /// <summary>当前电量贴片窗口句柄（同进程的其他贴片用它做左邻定位）。</summary>
+    public static IntPtr CurrentWindowHandle =>
+        _current is not null && Native.IsWindow(_current._hwnd) ? _current._hwnd : IntPtr.Zero;
+
     public TaskbarPillWindow(IntPtr taskbarHwnd, Action? onInvalidate = null)
     {
         // 进程内只允许一个贴片窗口：上一实例还在就先收掉，否则它的窗口没人驱动、会冻在屏幕上

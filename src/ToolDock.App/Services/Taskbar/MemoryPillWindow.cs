@@ -1,0 +1,466 @@
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Windows.Threading;
+using Gdi = System.Drawing;
+using Gdi2 = System.Drawing.Drawing2D;
+using GdiImaging = System.Drawing.Imaging;
+using ToolDock.Core;
+
+namespace ToolDock.App.Services;
+
+/// <summary>
+/// 任务栏内存贴片：与电量贴片同款做法——原生分层窗口 SetParent 到任务栏（Shell_TrayWnd 的子窗口），
+/// 用 UpdateLayeredWindow 提交 32 位 ARGB 位图。位置默认排在电量贴片**左边并留出间隔**，
+/// 点击贴片直接触发内存清理，右键弹出菜单。
+/// </summary>
+internal sealed class MemoryPillWindow : IDisposable
+{
+    private const string ClassName = "ToolDockMemoryPill";
+    private const string WindowTitle = "工具坞 内存";
+    private const int FollowIntervalMs = 1000;
+    private const double MinHeightDip = 22;
+    private const double MaxHeightDip = 40;
+    private const double TaskbarMarginDip = 6;
+    private const double EdgeGapDip = 6;      // 距任务栏右端（无电量贴片时）
+    private const double SeparationDip = 10;  // 与电量贴片之间的间隔
+
+    private static MemoryPillWindow? _current;
+    private static bool _classRegistered;
+
+    private readonly Action _onClick;
+    private readonly Action _onHide;
+    private readonly DispatcherTimer _timer;
+    private IntPtr _hwnd;
+    private IntPtr _taskbar;
+    private Gdi.Bitmap? _bitmap;
+    private IntPtr _memDc;
+    private IntPtr _dib;
+    private IntPtr _oldDib;
+    private IntPtr _dibBits;
+    private int _dibW;
+    private int _dibH;
+    private int _pillW = 80;
+    private int _pillH = 30;
+    private int _lastPercent = -1;
+    private bool _hidden;
+    private WndProcDelegate? _wndProc;
+
+    public MemoryPillWindow(IntPtr taskbar, Action onClick, Action onHide)
+    {
+        _current?.Dispose();
+        _current = this;
+        _taskbar = taskbar;
+        _onClick = onClick;
+        _onHide = onHide;
+
+        EnsureWindow();
+
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(FollowIntervalMs) };
+        _timer.Tick += (_, _) => Update();
+        _timer.Start();
+        Update();
+    }
+
+    public bool IsWindowValid => _hwnd != IntPtr.Zero && Native.IsWindow(_hwnd);
+
+    private void EnsureWindow()
+    {
+        if (_hwnd != IntPtr.Zero && Native.IsWindow(_hwnd))
+        {
+            return;
+        }
+        ReleaseWindow();
+
+        RegisterClassOnce();
+        var hInstance = Native.GetModuleHandleW(null);
+        _hwnd = Native.CreateWindowExW(
+            (uint)(Native.WS_EX_LAYERED | Native.WS_EX_TOOLWINDOW | Native.WS_EX_NOACTIVATE),
+            ClassName, WindowTitle, Native.WS_POPUP,
+            0, 0, 1, 1, IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
+        if (_hwnd == IntPtr.Zero)
+        {
+            Diag("create failed err=" + Marshal.GetLastWin32Error());
+            return;
+        }
+
+        Native.SetParent(_hwnd, _taskbar);
+        Native.ShowWindow(_hwnd, 4 /* SW_SHOWNOACTIVATE */);
+    }
+
+    private void RegisterClassOnce()
+    {
+        if (_classRegistered)
+        {
+            return;
+        }
+        _classRegistered = true;
+        _wndProc = WndProc;
+        var wc = new Native.WNDCLASSW
+        {
+            lpfnWndProc = Marshal.GetFunctionPointerForDelegate(_wndProc),
+            hInstance = Native.GetModuleHandleW(null),
+            hCursor = Native.LoadCursorW(IntPtr.Zero, (IntPtr)Native.IDC_ARROW),
+            hbrBackground = IntPtr.Zero,
+            lpszClassName = ClassName,
+        };
+        Native.RegisterClassW(ref wc);
+    }
+
+    private IntPtr WndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
+    {
+        switch (msg)
+        {
+            case Native.WM_LBUTTONUP:
+                _onClick();
+                return IntPtr.Zero;
+            case Native.WM_RBUTTONUP:
+                ShowMenu();
+                return IntPtr.Zero;
+        }
+        return Native.DefWindowProcW(hwnd, msg, wParam, lParam);
+    }
+
+    private void ShowMenu()
+    {
+        IntPtr menu = Native.CreatePopupMenu();
+        try
+        {
+            Native.AppendMenuW(menu, Native.MF_STRING, (IntPtr)1, "立即清理内存");
+            Native.AppendMenuW(menu, Native.MF_STRING, (IntPtr)2, "打开内存清理");
+            Native.AppendMenuW(menu, Native.MF_SEPARATOR, IntPtr.Zero, null);
+            Native.AppendMenuW(menu, Native.MF_STRING, (IntPtr)3, "隐藏内存贴片");
+
+            var pt = Native.GetCursorPos();
+            Native.SetForegroundWindow(_hwnd);
+            int cmd = Native.TrackPopupMenuEx(menu, Native.TPM_RETURNCMD | Native.TPM_RIGHTBUTTON, pt.X, pt.Y, _hwnd, IntPtr.Zero);
+            Native.PostMessageW(_hwnd, Native.WM_NULL, IntPtr.Zero, IntPtr.Zero);
+
+            switch (cmd)
+            {
+                case 1:
+                    _onClick();
+                    break;
+                case 2:
+                    MemoryPillService.OpenMemCleanPage?.Invoke();
+                    break;
+                case 3:
+                    _onHide();
+                    break;
+            }
+        }
+        finally
+        {
+            Native.DestroyMenu(menu);
+        }
+    }
+
+    /// <summary>每秒重算位置并刷新百分比。</summary>
+    private void Update()
+    {
+        try
+        {
+            UpdateCore();
+        }
+        catch (Exception exception)
+        {
+            Diag("update failed: " + exception.GetType().Name + " " + exception.Message);
+        }
+    }
+
+    private void UpdateCore()
+    {
+        if (_hwnd == IntPtr.Zero || _hidden)
+        {
+            return;
+        }
+        if (!Native.IsWindow(_taskbar))
+        {
+            _taskbar = Native.FindWindowW(Native.TaskbarClassName, null);
+            if (_taskbar == IntPtr.Zero)
+            {
+                return;
+            }
+            Native.SetParent(_hwnd, _taskbar);
+        }
+        if (!Native.GetWindowRect(_taskbar, out var taskbarRect))
+        {
+            return;
+        }
+
+        var taskbar = new PixelRect(taskbarRect.Left, taskbarRect.Top,
+            taskbarRect.Right - taskbarRect.Left, taskbarRect.Bottom - taskbarRect.Top);
+        if (TaskbarLayout.IsTaskbarHidden(taskbar))
+        {
+            Native.ShowWindow(_hwnd, Native.SW_HIDE);
+            return;
+        }
+
+        uint dpi = Native.GetDpiForWindow(_taskbar);
+        if (dpi == 0)
+        {
+            dpi = 96;
+        }
+        double scale = dpi / 96.0;
+
+        int percent = (int)(CleanupCore.ReadMemorySnapshot()?.LoadPercent ?? 0);
+        bool repaint = percent != _lastPercent || _bitmap is null;
+
+        _pillH = TaskbarLayout.PillHeight(taskbar, scale, TaskbarMarginDip, MinHeightDip, MaxHeightDip);
+        _pillW = (int)Math.Ceiling(84 * scale);
+
+        var (x, y) = ComputePosition(taskbar, scale);
+        if (repaint)
+        {
+            Render(percent, scale);
+            _lastPercent = percent;
+        }
+        // 子窗口坐标相对父窗口客户区：定位数学算的是屏幕坐标，这里换算一次
+        var pt = new Native.POINT { X = x, Y = y };
+        Native.ScreenToClient(_taskbar, ref pt);
+        Upload(pt.X, pt.Y);
+        Native.ShowWindow(_hwnd, 4 /* SW_SHOWNOACTIVATE */);
+    }
+
+    /// <summary>优先排在电量贴片左侧并留间隔；没有电量贴片时贴托盘左边。</summary>
+    private (int X, int Y) ComputePosition(PixelRect taskbar, double scale)
+    {
+        int gap = (int)Math.Round(EdgeGapDip * scale);
+        int separation = (int)Math.Round(SeparationDip * scale);
+
+        if (TaskbarLayout.IsHorizontal(taskbar))
+        {
+            var battery = TaskbarPillWindow.CurrentWindowHandle;
+                int anchorRight;
+            if (battery != IntPtr.Zero && Native.GetWindowRect(battery, out var br))
+            {
+                anchorRight = br.Left - separation;
+            }
+            else
+            {
+                IntPtr tray = Native.FindWindowW(Native.TrayNotifyClassName, null);
+                anchorRight = tray != IntPtr.Zero && Native.GetWindowRect(tray, out var tr)
+                    ? tr.Left - gap
+                    : taskbar.Right - gap;
+            }
+            int x = Math.Clamp(anchorRight - _pillW, taskbar.Left + TaskbarLayout.EdgeInsetPx,
+                Math.Max(taskbar.Left + TaskbarLayout.EdgeInsetPx, taskbar.Right - _pillW - TaskbarLayout.EdgeInsetPx));
+            int y = taskbar.Top + (taskbar.Height - _pillH) / 2;
+            return (x, y);
+        }
+
+        // 竖向任务栏：排在电量贴片上方
+        var batteryV = TaskbarPillWindow.CurrentWindowHandle;
+        int anchorBottom = batteryV != IntPtr.Zero && Native.GetWindowRect(batteryV, out var bv)
+            ? bv.Top - separation
+            : taskbar.Bottom - gap;
+        int yv = Math.Clamp(anchorBottom - _pillH, taskbar.Top + TaskbarLayout.EdgeInsetPx,
+            Math.Max(taskbar.Top + TaskbarLayout.EdgeInsetPx, taskbar.Bottom - _pillH - TaskbarLayout.EdgeInsetPx));
+        int xv = taskbar.Left + (taskbar.Width - _pillW) / 2;
+        return (xv, yv);
+    }
+
+    private void Render(int percent, double scale)
+    {
+        _bitmap?.Dispose();
+        var bmp = new Gdi.Bitmap(_pillW, _pillH, GdiImaging.PixelFormat.Format32bppPArgb);
+        using (var g = Gdi.Graphics.FromImage(bmp))
+        {
+            g.SmoothingMode = Gdi2.SmoothingMode.AntiAlias;
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+            g.Clear(Gdi.Color.Transparent);
+
+            bool light = MemoryPillService.IsLightTheme();
+            var bg = light ? Gdi.Color.FromArgb(255, 243, 243, 243) : Gdi.Color.FromArgb(255, 43, 43, 43);
+            var border = light ? Gdi.Color.FromArgb(40, 0, 0, 0) : Gdi.Color.FromArgb(60, 255, 255, 255);
+            var text = light ? Gdi.Color.FromArgb(255, 20, 20, 20) : Gdi.Color.FromArgb(255, 245, 245, 245);
+            var accent = percent switch
+            {
+                >= 85 => Gdi.Color.FromArgb(255, 0xE2, 0x44, 0x5C),
+                >= 70 => Gdi.Color.FromArgb(255, 0xFA, 0xAA, 0x17),
+                _ => Gdi.Color.FromArgb(255, 0x34, 0xC7, 0x59),
+            };
+
+            using (var path = RoundedRect(new Gdi.RectangleF(0.5f, 0.5f, _pillW - 1, _pillH - 1), _pillH / 2f))
+            using (var fill = new Gdi.SolidBrush(bg))
+            using (var pen = new Gdi.Pen(border, 1f))
+            {
+                g.FillPath(fill, path);
+                g.DrawPath(pen, path);
+            }
+
+            // 内存条图标：圆角方块 + 三条横线
+            float iconSize = _pillH * 0.42f;
+            var iconRect = new Gdi.RectangleF(_pillH * 0.30f, (_pillH - iconSize) / 2f, iconSize, iconSize);
+            using (var iconPath = RoundedRect(iconRect, 2f * (float)scale))
+            using (var iconPen = new Gdi.Pen(accent, 1.4f * (float)scale))
+            {
+                g.DrawPath(iconPen, iconPath);
+            }
+            using (var linePen = new Gdi.Pen(accent, 1.2f * (float)scale))
+            {
+                for (int i = 1; i <= 2; i++)
+                {
+                    float ly = iconRect.Top + iconRect.Height * i / 3f;
+                    g.DrawLine(linePen, iconRect.Left + iconSize * 0.2f, ly, iconRect.Right - iconSize * 0.2f, ly);
+                }
+            }
+
+            string label = percent + "%";
+            using var font = new Gdi.Font("Segoe UI", (float)(_pillH * 0.42f / scale * 0.75), Gdi.FontStyle.Regular, Gdi.GraphicsUnit.Pixel);
+            using var textBrush = new Gdi.SolidBrush(text);
+            var format = new Gdi.StringFormat
+            {
+                Alignment = Gdi.StringAlignment.Near,
+                LineAlignment = Gdi.StringAlignment.Center,
+            };
+            g.DrawString(label, font, textBrush,
+                new Gdi.RectangleF(iconRect.Right + 4 * (float)scale, 0, _pillW - iconRect.Right - 6 * (float)scale, _pillH),
+                format);
+        }
+        _bitmap = bmp;
+    }
+
+    private void Upload(int x, int y)
+    {
+        if (_bitmap is null)
+        {
+            return;
+        }
+        EnsureDib(_pillW, _pillH);
+        if (_dib == IntPtr.Zero)
+        {
+            return;
+        }
+        CopyToDib(_bitmap, _pillW, _pillH);
+
+        var dst = new Native.POINT { X = x, Y = y };
+        var size = new Native.SIZE { cx = _pillW, cy = _pillH };
+        var src = new Native.POINT { X = 0, Y = 0 };
+        var blend = new Native.BLENDFUNCTION
+        {
+            BlendOp = Native.AC_SRC_OVER,
+            BlendFlags = 0,
+            SourceConstantAlpha = 255,
+            AlphaFormat = Native.AC_SRC_ALPHA,
+        };
+        Native.UpdateLayeredWindow(_hwnd, IntPtr.Zero, ref dst, ref size, _memDc, ref src, 0, ref blend, Native.ULW_ALPHA);
+    }
+
+    private void EnsureDib(int w, int h)
+    {
+        if (_dib != IntPtr.Zero && _dibW == w && _dibH == h)
+        {
+            return;
+        }
+        ReleaseDib();
+        var bmi = new Native.BITMAPINFO
+        {
+            bmiHeader = new Native.BITMAPINFOHEADER
+            {
+                biSize = Marshal.SizeOf<Native.BITMAPINFOHEADER>(),
+                biWidth = w,
+                biHeight = -h,
+                biPlanes = 1,
+                biBitCount = 32,
+                biCompression = 0,
+            },
+        };
+        _memDc = Native.CreateCompatibleDC(IntPtr.Zero);
+        _dib = Native.CreateDIBSection(IntPtr.Zero, ref bmi, 0, out _dibBits, IntPtr.Zero, 0);
+        _oldDib = Native.SelectObject(_memDc, _dib);
+        _dibW = w;
+        _dibH = h;
+    }
+
+    private void CopyToDib(Gdi.Bitmap bmp, int w, int h)
+    {
+        var data = bmp.LockBits(new Gdi.Rectangle(0, 0, w, h), GdiImaging.ImageLockMode.ReadOnly, GdiImaging.PixelFormat.Format32bppPArgb);
+        try
+        {
+            for (int y = 0; y < h; y++)
+            {
+                IntPtr srcRow = data.Scan0 + y * data.Stride;
+                IntPtr dstRow = _dibBits + y * w * 4;
+                CopyMemory(dstRow, srcRow, (uint)(w * 4));
+            }
+        }
+        finally
+        {
+            bmp.UnlockBits(data);
+        }
+    }
+
+    private void ReleaseDib()
+    {
+        if (_memDc != IntPtr.Zero)
+        {
+            if (_oldDib != IntPtr.Zero)
+            {
+                Native.SelectObject(_memDc, _oldDib);
+            }
+            Native.DeleteDC(_memDc);
+            _memDc = IntPtr.Zero;
+        }
+        if (_dib != IntPtr.Zero)
+        {
+            Native.DeleteObject(_dib);
+            _dib = IntPtr.Zero;
+        }
+        _oldDib = IntPtr.Zero;
+        _dibBits = IntPtr.Zero;
+        _dibW = _dibH = 0;
+    }
+
+    private void ReleaseWindow()
+    {
+        if (_hwnd != IntPtr.Zero)
+        {
+            Native.DestroyWindow(_hwnd);
+            _hwnd = IntPtr.Zero;
+        }
+        ReleaseDib();
+        _bitmap?.Dispose();
+        _bitmap = null;
+    }
+
+    public void Dispose()
+    {
+        if (ReferenceEquals(_current, this))
+        {
+            _current = null;
+        }
+        try { _timer.Stop(); } catch { }
+        ReleaseWindow();
+    }
+
+    private static Gdi2.GraphicsPath RoundedRect(Gdi.RectangleF r, float radius)
+    {
+        var path = new Gdi2.GraphicsPath();
+        var d = radius * 2;
+        path.AddArc(r.X, r.Y, d, d, 180, 90);
+        path.AddArc(r.Right - d, r.Y, d, d, 270, 90);
+        path.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
+        path.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
+    }
+
+    private delegate IntPtr WndProcDelegate(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("kernel32.dll", EntryPoint = "RtlMoveMemory", SetLastError = false)]
+    private static extern void CopyMemory(IntPtr dest, IntPtr src, uint count);
+
+    private static void Diag(string line)
+    {
+        try
+        {
+            string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ToolDock", "logs");
+            Directory.CreateDirectory(dir);
+            File.AppendAllText(Path.Combine(dir, $"mempill-{DateTime.Now:yyyyMMdd}.log"),
+                $"{DateTime.Now:HH:mm:ss.fff} {line}{Environment.NewLine}");
+        }
+        catch
+        {
+        }
+    }
+}

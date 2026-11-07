@@ -160,6 +160,27 @@
                     </StackPanel>
                 </Border>
 
+                <!-- 任务栏贴片 -->
+                <TextBlock Text="任务栏贴片" Style="{StaticResource SectionTitleStyle}" Margin="2,16,0,8" />
+                <Border Style="{StaticResource SettingsCardStyle}">
+                    <StackPanel>
+                        <Grid Margin="0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="在任务栏显示内存贴片" Style="{StaticResource RowTitleStyle}" />
+                                <TextBlock Text="显示当前内存占用，点击贴片即可清理；与电量贴片并排分隔显示"
+                                           Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <ToggleButton Grid.Column="1" x:Name="MemoryPillToggle" Style="{StaticResource SwitchStyle}"
+                                          Checked="MemoryPill_Changed" Unchecked="MemoryPill_Changed"
+                                          VerticalAlignment="Center" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
             </StackPanel>
         </ScrollViewer>
     </Grid>

@@ -22,7 +22,15 @@ public partial class MemCleanPage : UserControl
             Interval = TimeSpan.FromSeconds(2),
         };
         _timer.Tick += (_, _) => RefreshMemory();
-        Loaded += (_, _) => { LoadState(); RefreshMemory(); _timer.Start(); };
+        Loaded += (_, _) =>
+        {
+            LoadState();
+            RefreshMemory();
+            _timer.Start();
+            _syncing = true;
+            MemoryPillToggle.IsChecked = Services.MemoryPillService.Instance.IsEnabled;
+            _syncing = false;
+        };
         Unloaded += (_, _) => _timer.Stop();
     }
 
@@ -177,6 +185,15 @@ public partial class MemCleanPage : UserControl
     }
 
     private void Region_Changed(object sender, RoutedEventArgs e) => SendConfig();
+
+    private void MemoryPill_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_syncing)
+        {
+            return;
+        }
+        Services.MemoryPillService.Instance.SetEnabled(MemoryPillToggle.IsChecked == true);
+    }
 
     private void Back_Click(object sender, System.Windows.RoutedEventArgs e)
         => (System.Windows.Window.GetWindow(this) as MainWindow)?.ShowPage("builtin");

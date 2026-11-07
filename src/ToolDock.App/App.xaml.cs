@@ -62,6 +62,28 @@ public partial class App : Application
                 StartupLog("app: 电量监听启动失败 " + exception.Message);
             }
 
+            // 任务栏内存贴片：点击即清理；右键可打开内存清理页
+            try
+            {
+                Services.MemoryPillService.OpenMemCleanPage = () =>
+                {
+                    var window = Current?.MainWindow;
+                    if (window is null)
+                    {
+                        return;
+                    }
+                    window.Show();
+                    window.WindowState = WindowState.Normal;
+                    window.Activate();
+                    (window as MainWindow)?.ShowPage("memclean");
+                };
+                Services.MemoryPillService.Instance.Start();
+            }
+            catch (Exception exception)
+            {
+                StartupLog("app: 内存贴片启动失败 " + exception.Message);
+            }
+
             var mainWindow = new MainWindow();
             StartupLog("app: 主窗构造完成");
             MainWindow = mainWindow;
@@ -94,6 +116,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         // 电量监听（BLE/经典蓝牙/HID 轮询）随即关闭，不留在后台占资源
+        try { Services.MemoryPillService.Instance.Stop(); } catch { }
         Services.BatteryMonitor.Instance.Dispose();
         AgentLink.Instance.Dispose();
         base.OnExit(e);
