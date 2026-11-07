@@ -1,0 +1,181 @@
+<UserControl
+    x:Class="ToolDock.App.Views.BatteryCaptureView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Foreground="{DynamicResource Text.Primary}">
+
+    <!-- 设备诊断/采证（移植 VigilWatt 该页的流程，UI 用工具箱样式重做） -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="20,4,20,16">
+
+                <!-- 任务与设备 -->
+                <TextBlock Text="采集任务" Style="{StaticResource SectionTitleStyle}" Margin="2,8,0,8" />
+                <Border Style="{StaticResource SettingsCardStyle}">
+                    <StackPanel>
+                        <Grid Margin="0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="任务类型" Style="{StaticResource RowTitleStyle}" />
+                                <TextBlock x:Name="TaskHint" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0"
+                                           Text="未适配的新设备：列出全部接口，未适配的排前面" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <ComboBox x:Name="TaskBox" Width="200" Height="32" VerticalContentAlignment="Center"
+                                          SelectionChanged="Task_Changed">
+                                    <ComboBoxItem Content="未知设备调查" />
+                                    <ComboBoxItem Content="已支持设备诊断" />
+                                </ComboBox>
+                                <Button Content="刷新设备" MinWidth="96" Height="32" Margin="8,0,0,0" Padding="12,0"
+                                        Style="{StaticResource AppButtonStyle}" Click="RefreshDevices_Click" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 设备 / 接口 -->
+                <TextBlock Text="设备与接口" Style="{StaticResource SectionTitleStyle}" Margin="2,16,0,8" />
+                <Border Style="{StaticResource SettingsCardStyle}" Padding="16,10">
+                    <Grid Height="260">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <ListBox x:Name="DeviceList" Grid.Column="0" BorderThickness="0" Background="Transparent"
+                                 SelectionChanged="Device_SelectionChanged"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Padding" Value="8,6" />
+                                    <Setter Property="Margin" Value="0,1" />
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel AutomationProperties.Name="{Binding Title}">
+                                        <TextBlock FontSize="13" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Margin="0,2,0,0" FontSize="11"
+                                                   Foreground="{DynamicResource Text.Tertiary}"
+                                                   Text="{Binding Subtitle}" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <Border Grid.Column="1" Width="1" Background="{DynamicResource Divider}" />
+
+                        <Grid Grid.Column="2">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <Grid Grid.Row="0" Margin="8,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="接口能力" Style="{StaticResource CardLabelStyle}" VerticalAlignment="Center" />
+                                <Button x:Name="ProbeButton" Grid.Column="1" Content="探测接口" MinWidth="88" Height="28"
+                                        Padding="10,0" FontSize="12" IsEnabled="False"
+                                        Style="{StaticResource AppButtonStyle}" Click="Probe_Click" />
+                            </Grid>
+                            <ScrollViewer Grid.Row="1" Margin="8,0,0,0" VerticalScrollBarVisibility="Auto">
+                                <ItemsControl x:Name="CapabilityList">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Margin="0,2" Padding="8,6" CornerRadius="4"
+                                                    Background="{DynamicResource Card.Background}">
+                                                <StackPanel>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock FontSize="12" Text="{Binding Title}" />
+                                                        <TextBlock Margin="8,0,0,0" FontSize="11" FontWeight="SemiBold"
+                                                                   Foreground="{Binding StatusBrush}" Text="{Binding StatusText}" />
+                                                    </StackPanel>
+                                                    <TextBlock Margin="0,2,0,0" FontSize="11" TextWrapping="Wrap"
+                                                               Foreground="{DynamicResource Text.Tertiary}"
+                                                               Text="{Binding Evidence}" />
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- 采集 -->
+                <TextBlock Text="按下述步骤操作设备" Style="{StaticResource SectionTitleStyle}" Margin="2,16,0,8" />
+                <Border Style="{StaticResource SettingsCardStyle}" Padding="16,10">
+                    <StackPanel>
+                        <ItemsControl x:Name="StepList" Margin="0,6,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Width="18" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                                   Foreground="{Binding MarkerBrush}" Text="{Binding Marker}"
+                                                   VerticalAlignment="Top" />
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{Binding TitleBrush}"
+                                                       Text="{Binding Title}" />
+                                            <TextBlock Margin="0,2,0,0" FontSize="11" TextWrapping="Wrap"
+                                                       Foreground="{DynamicResource Text.Tertiary}" Text="{Binding Hint}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Border Style="{StaticResource RowDividerStyle}" Margin="0,8,0,0" />
+                        <Grid Margin="0,10,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="CaptureStatus" VerticalAlignment="Center" FontSize="12"
+                                       Foreground="{DynamicResource Text.Secondary}" Text="未开始" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Button x:Name="StartButton" Content="开始采集" MinWidth="96" Height="32" Padding="12,0"
+                                        Style="{StaticResource PrimaryButtonStyle}" Click="Start_Click" />
+                                <Button x:Name="NextStepButton" Content="下一步" MinWidth="80" Height="32" Margin="8,0,0,0"
+                                        Padding="12,0" IsEnabled="False"
+                                        Style="{StaticResource AppButtonStyle}" Click="NextStep_Click" />
+                                <Button x:Name="StopButton" Content="停止并导出" MinWidth="104" Height="32" Margin="8,0,0,0"
+                                        Padding="12,0" IsEnabled="False"
+                                        Style="{StaticResource AppButtonStyle}" Click="Stop_Click" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Grid Grid.Row="1" Margin="20,8,20,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="ExportText" VerticalAlignment="Center" FontSize="11"
+                       Foreground="{DynamicResource Text.Tertiary}"
+                       Text="采集只申请只读权限，不向设备写报文；导出包留在本机。" TextTrimming="CharacterEllipsis" />
+            <Button x:Name="OpenFolderButton" Grid.Column="1" Content="打开采集目录" MinWidth="104" Height="28"
+                    Padding="10,0" FontSize="12" Visibility="Collapsed"
+                    Style="{StaticResource AppButtonStyle}" Click="OpenFolder_Click" />
+        </Grid>
+    </Grid>
+</UserControl>

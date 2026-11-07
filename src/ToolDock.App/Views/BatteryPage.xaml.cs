@@ -36,6 +36,7 @@ public partial class BatteryPage : UserControl
             {
                 "stats" => new BatteryStatsView(),
                 "history" => new BatteryHistoryView(),
+                "capture" => new BatteryCaptureView(),
                 "settings" => new BatterySettingsView(),
                 _ => new BatteryDevicesView(),
             };

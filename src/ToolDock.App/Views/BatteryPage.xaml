@@ -39,6 +39,8 @@
                          Style="{StaticResource SubTabStyle}" Checked="Tab_Checked" />
             <RadioButton GroupName="BatteryTab" Content="历史" Tag="history"
                          Style="{StaticResource SubTabStyle}" Checked="Tab_Checked" />
+            <RadioButton GroupName="BatteryTab" Content="诊断" Tag="capture"
+                         Style="{StaticResource SubTabStyle}" Checked="Tab_Checked" />
             <RadioButton GroupName="BatteryTab" Content="电量设置" Tag="settings"
                          Style="{StaticResource SubTabStyle}" Checked="Tab_Checked" />
         </StackPanel>
