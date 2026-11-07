@@ -51,6 +51,7 @@ internal sealed class TrayIconController : IDisposable
             NativeMethods.GetSystemMetrics(NativeMethods.SM_CXSMICON) <= 16 ? 16 : 32);
         _taskbarCreatedMsg = NativeMethods.RegisterWindowMessageW("TaskbarCreated");
         AddIcon();
+        LogFile.Write($"[tray] NIM_ADD 结果={_added} hIcon=0x{_hIcon.ToInt64():X} hwnd=0x{_hwnd.ToInt64():X} err={Marshal.GetLastWin32Error()}");
     }
 
     /// <summary>阻塞运行消息循环，直到托盘菜单"退出"。</summary>

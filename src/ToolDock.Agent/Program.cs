@@ -57,6 +57,7 @@ internal static class Program
         MemoryTrim.TrimCurrent(); // 启动即回收一次工作集
         _tray.RunMessageLoop(); // 阻塞主线程，直到托盘菜单"退出"
 
+        pipeServer.NotifyShutdown();
         LifetimeCts.Cancel();
         try
         {

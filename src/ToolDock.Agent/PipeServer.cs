@@ -40,6 +40,27 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Memo
         }
     }
 
+    /// <summary>托盘「退出」时通知界面进程一起收尾（界面关窗只是隐藏，需要这条消息才会真退出）。</summary>
+    public void NotifyShutdown()
+    {
+        NamedPipeServerStream? app;
+        lock (_gate)
+        {
+            app = _appConnection;
+        }
+        if (app is { IsConnected: true })
+        {
+            try
+            {
+                PipeFrame.WriteAsync(app, new PipeMessage { T = "shutdown" }, CancellationToken.None).Wait(800);
+            }
+            catch
+            {
+                // 界面已退出/管道已断，无需处理
+            }
+        }
+    }
+
     private async Task HandleClientAsync(NamedPipeServerStream server, CancellationToken cancellationToken)
     {
         try

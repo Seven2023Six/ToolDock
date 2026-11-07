@@ -7,6 +7,15 @@ namespace ToolDock.App;
 
 public partial class App : Application
 {
+    /// <summary>true = 正在真正退出（Agent 指挥）；否则关窗只是隐藏到托盘。</summary>
+    public static bool IsExiting { get; private set; }
+
+    public static void ExitApp()
+    {
+        IsExiting = true;
+        Current?.Shutdown();
+    }
+
     protected override void OnStartup(StartupEventArgs e)
     {
         try

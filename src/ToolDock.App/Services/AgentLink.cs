@@ -297,6 +297,11 @@ internal sealed class AgentLink : IDisposable
                 {
                     break;
                 }
+                if (message.T == "shutdown")
+                {
+                    Application.Current?.Dispatcher.Invoke(App.ExitApp);
+                    break;
+                }
                 if (message.T == "activate")
                 {
                     Application.Current?.Dispatcher.Invoke(() =>
