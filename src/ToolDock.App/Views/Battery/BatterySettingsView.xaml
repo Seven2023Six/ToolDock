@@ -134,6 +134,41 @@
                     </StackPanel>
                 </Border>
 
+                <TextBlock Text="诊断与日志" Style="{StaticResource SectionTitleStyle}" Margin="2,16,0,8" />
+                <Border Style="{StaticResource SettingsCardStyle}">
+                    <StackPanel>
+                        <Grid Margin="0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="日志级别" Style="{StaticResource RowTitleStyle}" />
+                                <TextBlock Text="写入 vigiltwatt 日志的详细程度" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <ComboBox x:Name="LogLevelBox" Grid.Column="1" Width="120" Height="32" VerticalContentAlignment="Center">
+                                <ComboBoxItem Content="调试" />
+                                <ComboBoxItem Content="信息" />
+                                <ComboBoxItem Content="警告" />
+                                <ComboBoxItem Content="错误" />
+                            </ComboBox>
+                        </Grid>
+                        <Border Style="{StaticResource RowDividerStyle}" />
+                        <Grid Margin="0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="日志目录" Style="{StaticResource RowTitleStyle}" />
+                                <TextBlock Text="电量监测与插件读数的运行日志" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <Button Grid.Column="1" MinWidth="96" Height="32" Padding="12,0"
+                                    Content="打开目录" Style="{StaticResource AppButtonStyle}" Click="OpenLogDir_Click" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
                 <TextBlock Text="2.4G 品牌插件" Style="{StaticResource SectionTitleStyle}" Margin="2,16,0,8" />
                 <Border Style="{StaticResource SettingsCardStyle}" Padding="16,4">
                     <Grid Margin="0,12">

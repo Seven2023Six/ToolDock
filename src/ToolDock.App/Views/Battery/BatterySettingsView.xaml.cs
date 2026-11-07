@@ -42,6 +42,7 @@ public partial class BatterySettingsView : UserControl
         RemainingTimeToggle.IsChecked = settings.RemainingTimeEstimateEnabled;
 
         PillToggle.IsChecked = settings.TaskbarBatteryEnabled;
+        LogLevelBox.SelectedIndex = ParseLogLevel(settings.LogLevel);
         PillModeBox.SelectedIndex = TaskbarBatteryMode.Normalize(settings.TaskbarBatteryMode) == TaskbarBatteryMode.Lowest ? 1 : 0;
         PillMaxBox.Items.Clear();
         foreach (var choice in TaskbarBatteryOptions.Choices)
@@ -120,6 +121,8 @@ public partial class BatterySettingsView : UserControl
         settings.MonitorSystemBattery = SystemBatteryToggle.IsChecked == true;
         settings.RemainingTimeEstimateEnabled = RemainingTimeToggle.IsChecked == true;
         settings.TaskbarBatteryEnabled = PillToggle.IsChecked == true;
+        settings.LogLevel = LogLevelFromIndex(LogLevelBox.SelectedIndex);
+        VigilWatt.Core.Utils.Log.MinLevel = LogLevelValueFromIndex(LogLevelBox.SelectedIndex);
         settings.TaskbarBatteryMode = PillModeBox.SelectedIndex == 1 ? TaskbarBatteryMode.Lowest : TaskbarBatteryMode.All;
         settings.TaskbarBatteryMaxDevices = PillMaxBox.SelectedItem is int max
             ? TaskbarBatteryOptions.Clamp(max)
@@ -138,6 +141,46 @@ public partial class BatterySettingsView : UserControl
         bool saved = monitor.SaveSettings();
         monitor.ApplySettings();
         StatusText.Text = saved ? "已保存并生效" : "已在本次运行生效，但写入配置文件失败";
+    }
+
+    private static int ParseLogLevel(string? value) => value?.ToLowerInvariant() switch
+    {
+        "debug" => 0,
+        "warn" => 2,
+        "error" => 3,
+        _ => 1,
+    };
+
+    private static string LogLevelFromIndex(int index) => index switch
+    {
+        0 => "debug",
+        2 => "warn",
+        3 => "error",
+        _ => "info",
+    };
+
+    private static VigilWatt.Core.Utils.LogLevel LogLevelValueFromIndex(int index) => index switch
+    {
+        0 => VigilWatt.Core.Utils.LogLevel.Debug,
+        2 => VigilWatt.Core.Utils.LogLevel.Warn,
+        3 => VigilWatt.Core.Utils.LogLevel.Error,
+        _ => VigilWatt.Core.Utils.LogLevel.Info,
+    };
+
+    private void OpenLogDir_Click(object sender, RoutedEventArgs e)
+    {
+        string dir = VigilWatt.Core.Utils.AppPaths.RootDir;
+        try
+        {
+            System.IO.Directory.CreateDirectory(dir);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"\"{dir}\"")
+            {
+                UseShellExecute = true,
+            });
+        }
+        catch
+        {
+        }
     }
 
     private static int ParseInt(string text, int min, int max, int fallback)
