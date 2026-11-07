@@ -92,6 +92,7 @@ public partial class MainWindow : Window
                 "home" => new HomePage(),
                 "battery" => new BatteryPage(),
                 "memclean" => new MemCleanPage(),
+                "custom" => new CustomToolsPage(),
                 "settings" => new SettingsPage(),
                 "about" => new AboutPage(),
                 _ => null,

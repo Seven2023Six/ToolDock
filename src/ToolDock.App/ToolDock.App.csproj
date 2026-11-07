@@ -25,6 +25,7 @@
   <!-- 窗口/任务栏图标：WPF Window.Icon 通过 pack URI 加载 -->
   <ItemGroup>
     <Resource Include="..\..\assets\app.ico" Link="app.ico" />
+    <Resource Include="..\..\assets\mem_icon.png" Link="mem_icon.png" />
   </ItemGroup>
 
 </Project>

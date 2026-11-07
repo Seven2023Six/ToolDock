@@ -67,6 +67,11 @@
                                      IsChecked="True"
                                      Checked="Nav_Checked" />
                         <!-- 方案 A「分组固定」：分组文本将来由插件 category 字段驱动 -->
+                        <RadioButton Style="{StaticResource NavItemStyle}"
+                                     GroupName="Nav"
+                                     Tag="&#xE71D;" Content="自定义"
+                                     CommandParameter="custom"
+                                     Checked="Nav_Checked" />
                         <TextBlock Text="监控" Style="{StaticResource NavGroupStyle}" />
                         <RadioButton Style="{StaticResource NavItemStyle}"
                                      GroupName="Nav"
@@ -74,9 +79,9 @@
                                      CommandParameter="battery"
                                      Checked="Nav_Checked" />
                         <TextBlock Text="系统" Style="{StaticResource NavGroupStyle}" />
-                        <RadioButton Style="{StaticResource NavItemStyle}"
+                        <RadioButton Style="{StaticResource NavImageItemStyle}"
                                      GroupName="Nav"
-                                     Tag="&#xE74D;" Content="内存清理"
+                                     Tag="pack://application:,,,/mem_icon.png" Content="内存清理"
                                      CommandParameter="memclean"
                                      Checked="Nav_Checked" />
                     </StackPanel>
