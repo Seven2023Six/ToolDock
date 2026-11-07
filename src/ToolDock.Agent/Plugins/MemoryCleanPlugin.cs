@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using ToolDock.Abstractions;
 using ToolDock.Core;
@@ -33,7 +34,8 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
     private uint _intervalMinutes = 30;
     private bool _allowStandbyAuto;
     private bool _confirmClean = true;
-    private DateTime _lastClean = DateTime.MinValue;
+    private DateTime _lastClean = DateTime.UtcNow;
+    private DateTime _lastAutoHint = DateTime.MinValue;
     private System.Threading.Timer? _autoTimer;
     private readonly object _gate = new();
 
@@ -51,6 +53,12 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
 
         context.Tray.AddMenu("立即清理内存", () => CleanNowExternal(confirmed: false));
         context.Tray.SetStatusLine("内存清理就绪");
+
+        // 免 UAC 任务跨会话持久：启动时校验存在性/掩码，缺失或过期才重建（重建需提权，能免则免）
+        if (_skipUac)
+        {
+            Task.Run(EnsureTasks);
+        }
 
         _autoTimer = new System.Threading.Timer(_ => AutoTick(), null, TimeSpan.FromSeconds(30), TimeSpan.FromMinutes(1));
 
@@ -71,6 +79,7 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
 
     public void ApplyConfig(ulong mask, bool autoClean, uint threshold, uint intervalMinutes, bool skipUac, bool allowFreezes, bool confirmClean)
     {
+        bool skip_uac_before = _skipUac;
         _mask = mask;
         _autoClean = autoClean;
         _threshold = threshold;
@@ -82,10 +91,18 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
         Persist();
         UpdateStatusLine();
 
-        // 免 UAC 计划任务里内嵌了掩码，配置变化时重建（手动 + 自动两个任务）
-        if (_skipUac)
+        // 免 UAC 状态迁移：新开启→装任务；关闭→卸任务（非提权删除走提权助手）；持续开启→仅缺失时重建
+        if (_skipUac && !skip_uac_before)
         {
-            InstallTask();
+            Task.Run(InstallTask);
+        }
+        else if (!_skipUac && skip_uac_before)
+        {
+            Task.Run(UninstallTask);
+        }
+        else if (_skipUac)
+        {
+            Task.Run(EnsureTasks);
         }
 
         _context?.Log.Info($"配置已更新（mask=0x{_mask:X} 自动={_autoClean} 阈值={_threshold}% 间隔={_intervalMinutes}分 免UAC={_skipUac} 自动含冻结区={_allowStandbyAuto} 清理确认={_confirmClean}）");
@@ -183,15 +200,30 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
                 return;
             }
 
-            // 免 UAC：计划任务以最高权限静默执行（手动走全掩码任务，自动走剔除冻结区任务）
+            // 自动清理是无人值守行为，绝不弹 UAC（Mem Reduct 对自动路径同样静默处理）：
+            // 免 UAC 开着走计划任务；没开或任务执行失败则跳过并节流提示，等用户开启免 UAC 后自然恢复
+            if (is_auto)
+            {
+                string task = AutoEffectiveMask() != _mask ? TaskNameAuto : TaskName;
+                if (_skipUac && RunScheduledTask(task))
+                {
+                    _lastClean = DateTime.UtcNow;
+                    context.Notify.Show("内存清理", $"自动清理已执行（{source}）");
+                    context.Log.Info($"自动清理已通过计划任务 {task} 执行（{source}，mask=0x{mask:X}）");
+                    return;
+                }
+                HintAutoBlocked(context, reason: _skipUac ? "免UAC任务执行失败" : "未开启免UAC");
+                return;
+            }
+
+            // 免 UAC：计划任务以最高权限静默执行（手动走全掩码任务）
             if (_skipUac)
             {
-                string task = is_auto && AutoEffectiveMask() != _mask ? TaskNameAuto : TaskName;
-                if (RunScheduledTask(task))
+                if (RunScheduledTask(TaskName))
                 {
                     _lastClean = DateTime.UtcNow;
                     context.Notify.Show("内存清理", $"清理已执行（{source}）");
-                    context.Log.Info($"清理已通过计划任务 {task} 执行（{source}，mask=0x{mask:X}）");
+                    context.Log.Info($"清理已通过计划任务 {TaskName} 执行（{source}，mask=0x{mask:X}）");
                     return;
                 }
                 context.Log.Warn("计划任务执行失败，回退到提权助手");
@@ -328,51 +360,129 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
         }
     }
 
-    private void InstallTask()
+    // ---- 免 UAC 任务管理 ----
+    // 关键事实：创建 RunLevel=Highest 的任务必须提权（非提权 schtasks /create 一律"拒绝访问"），
+    // 所以安装走 ElevatedHelper（开关切换时弹一次 UAC，之后全自动静默）；卸载/查询普通权限即可。
+
+    /// <summary>确保免 UAC 任务存在（任务不带掩码数字，改配置无需重建）；只在缺失时重建（重建要提权）。</summary>
+    private void EnsureTasks()
     {
-        string? helper = GetHelperPath();
-        if (helper is null)
+        lock (_gate)
         {
-            (_context?.Log).Warn("无法安装免 UAC 任务：找不到提权助手");
-            return;
-        }
-        try
-        {
-            // 手动任务：全掩码；自动任务：策略掩码（默认剔除冻结区）
-            CreateTask(TaskName, helper, $"-taskclean {_mask}");
-            CreateTask(TaskNameAuto, helper, $"-taskclean {AutoEffectiveMask()}");
-            (_context?.Log).Info($"免 UAC 计划任务已安装（手动 mask=0x{_mask:X} 自动 mask=0x{AutoEffectiveMask():X}）");
-        }
-        catch (Exception exception)
-        {
-            (_context?.Log).Warn("计划任务安装失败：" + exception.Message);
+            if (_context is not { } context || !_skipUac)
+            {
+                return;
+            }
+
+            if (TaskExists(TaskName, "-taskclean-manual") && TaskExists(TaskNameAuto, "-taskclean-auto"))
+            {
+                return; // 任务健在且参数正确，不打扰用户
+            }
+
+            InstallTask();
         }
     }
 
-    private void CreateTask(string task, string helper, string arguments)
+    private void InstallTask()
     {
-        using var process = Process.Start(new ProcessStartInfo("schtasks",
-            $"/create /f /tn {task} /tr \"\\\"{helper}\\\" {arguments}\" /sc once /sd 01/01/2000 /st 00:00 /rl highest")
+        if (_context is not { } context)
         {
-            UseShellExecute = true,
-            CreateNoWindow = true,
-        });
-        process?.WaitForExit(15000);
+            return;
+        }
+        string? helper = GetHelperPath();
+        if (helper is null)
+        {
+            context.Log.Warn("无法安装免 UAC 任务：找不到提权助手");
+            context.Notify.Show("内存清理", "找不到提权助手，免UAC不可用");
+            return;
+        }
+
+        bool ok;
+        if (context.Elevation.IsElevated)
+        {
+            ok = CreateTask(helper, TaskName, "-taskclean-manual") && CreateTask(helper, TaskNameAuto, "-taskclean-auto");
+        }
+        else
+        {
+            // 经提权助手创建（RunLevel=Highest 必须提权）：开关切换时弹一次 UAC，属用户主动操作
+            string result_file = Path.Combine(Path.GetTempPath(), $"tooldock_task_{Guid.NewGuid():N}.txt");
+            bool started = context.Elevation.RunElevatedAsync(helper,
+                $"-install-task -out \"{result_file}\"").GetAwaiter().GetResult();
+            if (!started)
+            {
+                context.Notify.Show("内存清理", "免UAC设置被取消（未提权）");
+                context.Log.Info("免 UAC 任务安装被用户取消");
+                return;
+            }
+            for (int i = 0; i < 35 && !File.Exists(result_file); i++)
+            {
+                Thread.Sleep(1000);
+            }
+            ok = File.Exists(result_file) && File.ReadAllText(result_file).StartsWith("ok=1", StringComparison.Ordinal);
+            try { File.Delete(result_file); } catch { }
+        }
+
+        if (ok)
+        {
+            context.Log.Info($"免 UAC 计划任务已安装（手动/自动两个任务，掩码运行时读取，当前 mask=0x{_mask:X} 自动=0x{AutoEffectiveMask():X}）");
+        }
+        else
+        {
+            context.Log.Warn("免 UAC 计划任务安装失败：提权助手创建任务未成功");
+            context.Notify.Show("内存清理", "免UAC任务创建失败，请重试开关");
+        }
+    }
+
+    private bool CreateTask(string helper, string task, string mode)
+    {
+        try
+        {
+            // 触发器设为十年后一次：永不自动触发、永不过期、/run 随时可调；
+            // /sd 只认固定补零的 yyyy/MM/dd（系统短日期格式 zh-CN 的 yyyy/M/d 会被 schtasks 拒绝）
+            string date = DateTime.Now.AddYears(10).ToString("yyyy/MM/dd", CultureInfo.InvariantCulture);
+            using var process = Process.Start(new ProcessStartInfo("schtasks",
+                $"/create /f /tn {task} /tr \"\\\"{helper}\\\" {mode}\" /sc once /sd {date} /st 00:00 /rl highest")
+            {
+                UseShellExecute = true,
+                CreateNoWindow = true,
+            });
+            process?.WaitForExit(15000);
+            return process?.ExitCode == 0;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private void UninstallTask()
     {
-        try
+        bool direct_ok = DeleteTask(TaskName) && DeleteTask(TaskNameAuto);
+        if (direct_ok || _context is not { } context)
         {
-            DeleteTask(TaskName);
-            DeleteTask(TaskNameAuto);
+            return;
         }
-        catch
+
+        // highest 任务非提权删不掉（实测"拒绝访问"）→ 经提权助手删除（关闭开关属用户主动操作，弹一次UAC可接受）
+        string? helper = GetHelperPath();
+        if (helper is null)
         {
+            context.Log.Warn("免 UAC 任务删除失败且找不到提权助手（残留任务无害，仅在被手动 /run 时生效）");
+            return;
+        }
+        string result_file = Path.Combine(Path.GetTempPath(), $"tooldock_task_{Guid.NewGuid():N}.txt");
+        bool started = context.Elevation.RunElevatedAsync(helper, $"-uninstall-task -out \"{result_file}\"").GetAwaiter().GetResult();
+        if (started)
+        {
+            for (int i = 0; i < 35 && !File.Exists(result_file); i++)
+            {
+                Thread.Sleep(1000);
+            }
+            try { File.Delete(result_file); } catch { }
         }
     }
 
-    private void DeleteTask(string task)
+    private bool DeleteTask(string task)
     {
         try
         {
@@ -382,10 +492,54 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
                 CreateNoWindow = true,
             });
             process?.WaitForExit(15000);
+            return process?.ExitCode == 0;
         }
         catch
         {
+            return false;
         }
+    }
+
+    /// <summary>查询任务存在且命令行包含预期参数（能识别旧格式任务并触发迁移重建）。</summary>
+    private static bool TaskExists(string task, string expected_arg)
+    {
+        try
+        {
+            using var process = Process.Start(new ProcessStartInfo("schtasks", $"/query /tn {task} /fo list /v")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+            });
+            if (process is null)
+            {
+                return false;
+            }
+            string output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit(10000);
+            return process.ExitCode == 0 && output.Contains(expected_arg, StringComparison.Ordinal);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>自动清理被跳过时的节流提示（30 分钟一次，避免每分钟气泡骚扰）。</summary>
+    private void HintAutoBlocked(IAgentContext context, string reason)
+    {
+        if (DateTime.UtcNow - _lastAutoHint < TimeSpan.FromMinutes(30))
+        {
+            context.Log.Info($"自动清理跳过（{reason}），提示节流中");
+            return;
+        }
+        _lastAutoHint = DateTime.UtcNow;
+        string message = reason == "未开启免UAC"
+            ? "自动清理需要开启「免 UAC 提权」开关（设置一次后即可静默执行）"
+            : "免UAC任务执行失败，请在设置里重新开关「免 UAC 提权」以重建任务";
+        context.Notify.Show("内存清理", message);
+        context.Log.Warn($"自动清理已跳过：{reason}");
+        context.Tray.SetStatusLine($"内存 {CleanupCore.ReadMemorySnapshot()?.LoadPercent ?? 0}% · 自动清理待启用（{reason}）");
     }
 
     private void Persist()

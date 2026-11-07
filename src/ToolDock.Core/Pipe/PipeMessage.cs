@@ -51,6 +51,20 @@ public sealed class PipeMessage
     public bool Duplicate { get; set; }
 }
 
+/// <summary>内存清理插件的持久化设置（plugindata/memclean.json，键为 PascalCase）。供免 UAC 助手运行时读取掩码，任务因此只需安装一次。</summary>
+public sealed class MemCleanPluginData
+{
+    public ulong Mask { get; set; } = 0xE7;
+    public bool AllowFreezes { get; set; }
+}
+
+/// <summary>插件设置文件（PascalCase 键）专用上下文：无命名策略，与落盘键名精确匹配。</summary>
+[JsonSourceGenerationOptions]
+[JsonSerializable(typeof(MemCleanPluginData))]
+public partial class MemCleanDataContext : JsonSerializerContext
+{
+}
+
 /// <summary>
 /// JSON 源生成上下文：Agent 走 NativeAOT，不能用反射序列化，
 /// 所以管道协议与设置文件统一走这里（App 侧共用，保证两边字节级一致）。
