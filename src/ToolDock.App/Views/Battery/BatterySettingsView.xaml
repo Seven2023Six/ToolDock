@@ -1,0 +1,113 @@
+<UserControl
+    x:Class="ToolDock.App.Views.BatterySettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Foreground="{DynamicResource Text.Primary}">
+
+    <!-- 设置子页：对应 VigilWatt 设置页里的电量相关项 -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" Margin="20,0,20,0" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel MaxWidth="760" HorizontalAlignment="Left">
+
+                <TextBlock Margin="2,0,0,8" FontSize="14" FontWeight="SemiBold" Text="提醒与采样" />
+                <Border Style="{StaticResource SettingsCardStyle}" Margin="0,0,0,16">
+                    <StackPanel>
+                        <Grid Margin="0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Style="{StaticResource RowTitleStyle}" Text="低电量提醒阈值" />
+                                <TextBlock Style="{StaticResource RowDescStyle}" Margin="0,2,0,0"
+                                           Text="低于该电量时提醒；0 表示关闭" />
+                            </StackPanel>
+                            <TextBox x:Name="ThresholdBox" Grid.Column="1" Width="60" Height="32"
+                                     Style="{StaticResource WinUITextBoxStyle}" />
+                        </Grid>
+                        <Border Style="{StaticResource RowDividerStyle}" />
+                        <Grid Margin="0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Style="{StaticResource RowTitleStyle}" Text="历史采样间隔（分钟）" />
+                                <TextBlock Style="{StaticResource RowDescStyle}" Margin="0,2,0,0"
+                                           Text="电量无变化时也按此间隔记一条历史" />
+                            </StackPanel>
+                            <TextBox x:Name="SampleBox" Grid.Column="1" Width="60" Height="32"
+                                     Style="{StaticResource WinUITextBoxStyle}" />
+                        </Grid>
+                        <Border Style="{StaticResource RowDividerStyle}" />
+                        <Grid Margin="0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Style="{StaticResource RowTitleStyle}" Text="历史保留天数" />
+                                <TextBlock Style="{StaticResource RowDescStyle}" Margin="0,2,0,0"
+                                           Text="超期记录会被自动清理" />
+                            </StackPanel>
+                            <TextBox x:Name="RetentionBox" Grid.Column="1" Width="60" Height="32"
+                                     Style="{StaticResource WinUITextBoxStyle}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Margin="2,0,0,8" FontSize="14" FontWeight="SemiBold" Text="监控范围" />
+                <Border Style="{StaticResource SettingsCardStyle}" Margin="0,0,0,16">
+                    <StackPanel>
+                        <CheckBox x:Name="SystemBatteryToggle" Margin="0,12" Content="监控本机电量" />
+                        <Border Style="{StaticResource RowDividerStyle}" />
+                        <CheckBox x:Name="RemainingTimeToggle" Margin="0,12" Content="显示剩余可用时间估算" />
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Margin="2,0,0,8" FontSize="14" FontWeight="SemiBold" Text="2.4G 品牌插件" />
+                <Border Style="{StaticResource SettingsCardStyle}" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Margin="0,12,0,4" Style="{StaticResource RowDescStyle}"
+                                   TextWrapping="Wrap"
+                                   Text="部分品牌需要向设备发送查询帧才能读到电量（会写设备）。默认关闭，按需启用。" />
+                        <ItemsControl x:Name="PluginList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock Style="{StaticResource RowTitleStyle}" Text="{Binding Title}" />
+                                            <TextBlock Style="{StaticResource RowDescStyle}" Margin="0,2,0,0"
+                                                       Text="{Binding Subtitle}" />
+                                        </StackPanel>
+                                        <CheckBox Grid.Column="1" VerticalAlignment="Center"
+                                                  IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="1" Margin="20,8,20,12">
+            <StackPanel Orientation="Horizontal">
+                <Button x:Name="SaveButton" MinWidth="120" Padding="14,6"
+                        Style="{StaticResource PrimaryButtonStyle}" Click="Save_Click" Content="保存设置" />
+                <TextBlock x:Name="StatusText" Margin="12,0,0,0" VerticalAlignment="Center"
+                           FontSize="12" Foreground="{DynamicResource Text.Secondary}" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

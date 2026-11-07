@@ -104,6 +104,34 @@
     </Style>
 
     <!-- 工具卡片按钮：图吧式图标卡（无边框、悬停高亮、圆角 8），供内置/自定义工具网格使用 -->
+    <!-- 子页切换胶囊（页面内二级导航） -->
+    <Style x:Key="SubTabStyle" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Margin" Value="0,0,8,0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="Pill" Height="30" Padding="14,0" CornerRadius="15"
+                            Background="Transparent">
+                        <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Pill" Property="Background" Value="{DynamicResource Nav.Hover}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Pill" Property="Background" Value="{DynamicResource Nav.Checked}" />
+                            <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="ToolCardButtonStyle" TargetType="Button">
         <Setter Property="Width" Value="104" />
         <Setter Property="Height" Value="112" />

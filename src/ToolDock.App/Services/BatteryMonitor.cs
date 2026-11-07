@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text.Json;
 using VigilWatt.Core.Devices;
 using VigilWatt.Core.Models;
 using VigilWatt.Core.Settings;
@@ -43,9 +44,10 @@ public sealed class BatteryMonitor : IDisposable
             }
             try
             {
-                var settings = new AppSettings
+                // 设置存在 ToolDock 自己的目录，不写 VigilWatt 的配置文件
+                var settings = LoadSettingsFile() ?? new AppSettings
                 {
-                    // 「外设电量显示」只管外设：本机电池不加进来（VigilWatt 里同样是可选开关）
+                    // 「外设电量显示」只管外设：本机电池默认不监控（VigilWatt 里同样是可选开关）
                     MonitorSystemBattery = false,
                 };
 
@@ -81,6 +83,114 @@ public sealed class BatteryMonitor : IDisposable
                 return _manager?.Devices ?? Array.Empty<DeviceStatus>();
             }
         }
+    }
+
+    /// <summary>底层设置对象（设置页读写低电量阈值/采样间隔/插件开关等）。</summary>
+    public AppSettings? Settings
+    {
+        get { lock (_gate) { return _settings; } }
+    }
+
+    /// <summary>已发现的 2.4G 品牌插件（设置页动态生成开关）。</summary>
+    public IReadOnlyList<VigilWatt.Core.Plugins.IBatteryPlugin> Plugins
+    {
+        get { lock (_gate) { return _manager?.Plugins ?? Array.Empty<VigilWatt.Core.Plugins.IBatteryPlugin>(); } }
+    }
+
+    /// <summary>设置改动后让 DeviceManager 立即生效（插件开关/本机电量/定时器）。</summary>
+    public void ApplySettings()
+    {
+        DeviceManager? manager;
+        lock (_gate) { manager = _manager; }
+        manager?.ApplySettings();
+    }
+
+    /// <summary>把设置写回磁盘（%APPDATA%\ToolDockattery-settings.json）。</summary>
+    public bool SaveSettings()
+    {
+        AppSettings? settings;
+        lock (_gate) { settings = _settings; }
+        if (settings is null)
+        {
+            return false;
+        }
+        try
+        {
+            string path = SettingsFilePath;
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, JsonSerializer.Serialize(settings, SerializerOptions));
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string SettingsFilePath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ToolDock", "battery-settings.json");
+
+    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
+
+    private static AppSettings? LoadSettingsFile()
+    {
+        try
+        {
+            string path = SettingsFilePath;
+            if (!File.Exists(path))
+            {
+                return null;
+            }
+            return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), SerializerOptions);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    // ---- 历史（统计页 / 历史页共用）----
+
+    public List<DeviceHistoryStat> GetDeviceHistoryStats()
+    {
+        HistoryStore? history;
+        lock (_gate) { history = _history; }
+        try { return history?.GetDeviceStats() ?? new List<DeviceHistoryStat>(); }
+        catch { return new List<DeviceHistoryStat>(); }
+    }
+
+    public HistoryStats? GetHistoryStats()
+    {
+        HistoryStore? history;
+        lock (_gate) { history = _history; }
+        try { return history?.GetStats(); }
+        catch { return null; }
+    }
+
+    public List<HistorySample> QueryHistory(string deviceId, DateTimeOffset from, DateTimeOffset to)
+    {
+        HistoryStore? history;
+        lock (_gate) { history = _history; }
+        try { return history?.Query(deviceId, from, to) ?? new List<HistorySample>(); }
+        catch { return new List<HistorySample>(); }
+    }
+
+    /// <summary>清理早于 cutoff 的历史记录，返回删除条数。</summary>
+    public int CleanupHistory(DateTimeOffset cutoff)
+    {
+        HistoryStore? history;
+        lock (_gate) { history = _history; }
+        try { return history?.CleanupOlderThan(cutoff) ?? 0; }
+        catch { return 0; }
+    }
+
+    /// <summary>删除若干设备的历史记录，返回删除条数。</summary>
+    public int DeleteHistory(IReadOnlyCollection<string> deviceIds)
+    {
+        HistoryStore? history;
+        lock (_gate) { history = _history; }
+        try { return history?.DeleteDevices(deviceIds) ?? 0; }
+        catch { return 0; }
     }
 
     /// <summary>是否把本机电池也列进来（VigilWatt 里本机电池是可选监控项）。</summary>
