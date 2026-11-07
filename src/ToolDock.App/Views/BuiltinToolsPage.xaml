@@ -1,0 +1,122 @@
+<UserControl
+    x:Class="ToolDock.App.Views.BuiltinToolsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Foreground="{DynamicResource Text.Primary}">
+
+    <!--
+      内置工具页（第二栏）：图吧工具箱式的图标网格。
+      单击工具图标 → 主界面切换为该工具的页面；工具页内「‹ 返回」回到本网格。
+    -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="24,20,24,0">
+            <TextBlock Text="内置工具" Style="{StaticResource PageTitleStyle}" />
+            <TextBlock Text="工具坞自带的实用工具，单击图标打开" Style="{StaticResource PageSubtitleStyle}" Margin="0,4,0,0" />
+        </StackPanel>
+
+        <!-- 图吧式提示条 -->
+        <Border
+            Grid.Row="1"
+            Margin="24,16,24,0"
+            Padding="16,10"
+            CornerRadius="6"
+            Background="{DynamicResource Card.Background}"
+            BorderBrush="{DynamicResource Card.Stroke}"
+            BorderThickness="1">
+            <TextBlock
+                Opacity="0.8"
+                FontSize="13"
+                Foreground="{DynamicResource Text.Secondary}"
+                Text="提示：单击工具图标即可打开对应工具页面。" />
+        </Border>
+
+        <!-- 工具图标网格 -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <WrapPanel Margin="24,16,24,24" Orientation="Horizontal" ItemHeight="120" ItemWidth="112">
+                <!-- 内存清理 -->
+                <Border
+                    Margin="4"
+                    Padding="8"
+                    Cursor="Hand"
+                    CornerRadius="8"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    BorderThickness="1"
+                    MouseLeftButtonUp="ToolCard_Click"
+                    Tag="memclean">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource Nav.Hover}" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel HorizontalAlignment="Center">
+                        <Image
+                            Width="40"
+                            Height="40"
+                            Margin="0,8,0,0"
+                            HorizontalAlignment="Center"
+                            Source="pack://application:,,,/mem_icon.png" />
+                        <TextBlock
+                            Margin="0,10,0,8"
+                            HorizontalAlignment="Center"
+                            FontSize="13"
+                            Text="内存清理"
+                            TextAlignment="Center"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <!-- 外设电量显示 -->
+                <Border
+                    Margin="4"
+                    Padding="8"
+                    Cursor="Hand"
+                    CornerRadius="8"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    BorderThickness="1"
+                    MouseLeftButtonUp="ToolCard_Click"
+                    Tag="battery">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource Nav.Hover}" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock
+                            Width="40"
+                            Height="40"
+                            Margin="0,8,0,0"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            FontFamily="Segoe MDL2 Assets"
+                            FontSize="34"
+                            Foreground="{DynamicResource Text.Primary}"
+                            Text="&#xE7EE;" />
+                        <TextBlock
+                            Margin="0,10,0,8"
+                            HorizontalAlignment="Center"
+                            FontSize="13"
+                            Text="外设电量显示"
+                            TextAlignment="Center"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+            </WrapPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

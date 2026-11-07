@@ -151,6 +151,9 @@ public partial class MemCleanPage : UserControl
 
     private void Region_Changed(object sender, RoutedEventArgs e) => SendConfig();
 
+    private void Back_Click(object sender, System.Windows.RoutedEventArgs e)
+        => (System.Windows.Window.GetWindow(this) as MainWindow)?.ShowPage("builtin");
+
     private void AutoClean_Changed(object sender, RoutedEventArgs e)
     {
         if (_syncing)

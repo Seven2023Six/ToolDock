@@ -15,7 +15,13 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                <TextBlock Text="设备电量" Style="{StaticResource PageTitleStyle}" />
+                <StackPanel Orientation="Horizontal">
+                    <Button Click="Back_Click" Cursor="Hand" Focusable="False"
+                            Background="Transparent" BorderThickness="0" Padding="6,2"
+                            Content="‹ 返回" FontSize="13"
+                            Foreground="{DynamicResource Text.Secondary}" />
+                    <TextBlock Text="外设电量显示" Style="{StaticResource PageTitleStyle}" VerticalAlignment="Center" />
+                </StackPanel>
                 <TextBlock Text="电量插件未接入 · 里程碑 M1 接入后显示设备" Style="{StaticResource PageSubtitleStyle}" Margin="0,2,0,0" />
             </StackPanel>
             <Button Grid.Column="1" Style="{StaticResource AppButtonStyle}" IsEnabled="False"

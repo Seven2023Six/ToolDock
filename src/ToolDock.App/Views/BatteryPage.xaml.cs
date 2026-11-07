@@ -8,4 +8,7 @@ public partial class BatteryPage : UserControl
     {
         InitializeComponent();
     }
+
+    private void Back_Click(object sender, System.Windows.RoutedEventArgs e)
+        => (System.Windows.Window.GetWindow(this) as MainWindow)?.ShowPage("builtin");
 }

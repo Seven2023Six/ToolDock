@@ -83,7 +83,8 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ShowPage(string key)
+    /// <summary>页面切换（工具页内的返回按钮也走这里）。</summary>
+    public void ShowPage(string key)
     {
         if (!_pageCache.TryGetValue(key, out var page))
         {
@@ -91,6 +92,7 @@ public partial class MainWindow : Window
             {
                 "home" => new HomePage(),
                 "battery" => new BatteryPage(),
+                "builtin" => new BuiltinToolsPage(),
                 "memclean" => new MemCleanPage(),
                 "custom" => new CustomToolsPage(),
                 "settings" => new SettingsPage(),

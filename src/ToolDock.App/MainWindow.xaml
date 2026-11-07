@@ -66,23 +66,17 @@
                                      CommandParameter="home"
                                      IsChecked="True"
                                      Checked="Nav_Checked" />
-                        <!-- 方案 A「分组固定」：分组文本将来由插件 category 字段驱动 -->
+                        <!-- 第二栏：内置工具（图吧式图标网格，点图标进入对应工具页） -->
                         <RadioButton Style="{StaticResource NavItemStyle}"
                                      GroupName="Nav"
-                                     Tag="&#xE71D;" Content="自定义"
+                                     Tag="&#xE71D;" Content="内置工具"
+                                     CommandParameter="builtin"
+                                     Checked="Nav_Checked" />
+                        <!-- 第三栏：自定义（最下方），清单后续注入 -->
+                        <RadioButton Style="{StaticResource NavItemStyle}"
+                                     GroupName="Nav"
+                                     Tag="&#xE8B7;" Content="自定义"
                                      CommandParameter="custom"
-                                     Checked="Nav_Checked" />
-                        <TextBlock Text="监控" Style="{StaticResource NavGroupStyle}" />
-                        <RadioButton Style="{StaticResource NavItemStyle}"
-                                     GroupName="Nav"
-                                     Tag="&#xE702;" Content="设备电量"
-                                     CommandParameter="battery"
-                                     Checked="Nav_Checked" />
-                        <TextBlock Text="系统" Style="{StaticResource NavGroupStyle}" />
-                        <RadioButton Style="{StaticResource NavImageItemStyle}"
-                                     GroupName="Nav"
-                                     Tag="pack://application:,,,/mem_icon.png" Content="内存清理"
-                                     CommandParameter="memclean"
                                      Checked="Nav_Checked" />
                     </StackPanel>
 

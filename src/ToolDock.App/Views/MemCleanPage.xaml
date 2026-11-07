@@ -14,7 +14,13 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                <TextBlock Text="内存清理" Style="{StaticResource PageTitleStyle}" />
+                <StackPanel Orientation="Horizontal">
+                    <Button Click="Back_Click" Cursor="Hand" Focusable="False"
+                            Background="Transparent" BorderThickness="0" Padding="6,2"
+                            Content="‹ 返回" FontSize="13"
+                            Foreground="{DynamicResource Text.Secondary}" />
+                    <TextBlock Text="内存清理" Style="{StaticResource PageTitleStyle}" VerticalAlignment="Center" />
+                </StackPanel>
                 <TextBlock x:Name="SummaryText" Text="—" Style="{StaticResource PageSubtitleStyle}" Margin="0,2,0,0" />
             </StackPanel>
             <Button Grid.Column="1" x:Name="CleanButton" Style="{StaticResource PrimaryButtonStyle}"
