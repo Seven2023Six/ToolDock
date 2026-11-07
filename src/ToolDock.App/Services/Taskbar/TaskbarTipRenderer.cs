@@ -16,34 +16,31 @@ public static class TaskbarTipRenderer
     public const double FontSize = 12;
     public const double Radius = 6;
     public const double MaxWidth = 240;
-    public const double Shadow = 6;
-    public const double ShadowOffsetY = 1;
 
-    public readonly record struct Skin(Gdi.Color Fill, Gdi.Color Border, Gdi.Color Text, Gdi.Color Shadow);
+    public readonly record struct Skin(Gdi.Color Fill, Gdi.Color Border, Gdi.Color Text);
 
     public static Skin SkinFor(bool light) => light
         ? new Skin(
             Fill: Gdi.Color.FromArgb(0xFF, 0xF3, 0xF3, 0xF3),
             Border: Gdi.Color.FromArgb(0xFF, 0xE0, 0xE0, 0xE0),
-            Text: Gdi.Color.FromArgb(0xFF, 0x1A, 0x1A, 0x1A),
-            Shadow: Gdi.Color.FromArgb(0x38, 0x00, 0x00, 0x00))
+            Text: Gdi.Color.FromArgb(0xFF, 0x1A, 0x1A, 0x1A))
         : new Skin(
             Fill: Gdi.Color.FromArgb(0xFF, 0x2C, 0x2C, 0x2C),
             Border: Gdi.Color.FromArgb(0xFF, 0x3F, 0x3F, 0x3F),
-            Text: Gdi.Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF),
-            Shadow: Gdi.Color.FromArgb(0x55, 0x00, 0x00, 0x00));
+            Text: Gdi.Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF));
 
-    /// <summary>画提示；位图含阴影边距，<paramref name="bubbleW"/>/<paramref name="bubbleH"/> 是可见气泡。</summary>
+    /// <summary>
+    /// 画提示（只有气泡本体，不画阴影）。旧实现叠了 6 圈递减 alpha 的黑色圆角阴影，
+    /// 相邻圈互相叠加后紧贴气泡处接近 70% 黑，视觉上就是一圈突兀的黑边，故整体移除。
+    /// </summary>
     public static Gdi.Bitmap Render(
         string text, Skin skin, float scale,
-        out int widthPx, out int heightPx, out int shadowPx, out int bubbleW, out int bubbleH)
+        out int widthPx, out int heightPx, out int bubbleW, out int bubbleH)
     {
-        shadowPx = (int)Math.Round(Shadow * scale);
         int padH = (int)Math.Round(PadH * scale);
         int padV = (int)Math.Round(PadV * scale);
         int maxTextW = (int)Math.Round(MaxWidth * scale);
         float radius = (float)(Radius * scale);
-        int shadowOy = (int)Math.Round(ShadowOffsetY * scale);
 
         using var font = new Gdi.Font("Microsoft YaHei UI", (float)(FontSize * scale),
             Gdi.FontStyle.Regular, Gdi.GraphicsUnit.Pixel);
@@ -53,28 +50,16 @@ public static class TaskbarTipRenderer
 
         bubbleW = Math.Max(1, (int)Math.Ceiling(textSize.Width) + padH * 2);
         bubbleH = Math.Max(1, (int)Math.Ceiling(textSize.Height) + padV * 2);
-        widthPx = bubbleW + shadowPx * 2;
-        heightPx = bubbleH + shadowPx * 2 + Math.Max(0, shadowOy);
+        widthPx = bubbleW;
+        heightPx = bubbleH;
 
         var bmp = new Gdi.Bitmap(widthPx, heightPx, GdiImaging.PixelFormat.Format32bppPArgb);
         using var g = Gdi.Graphics.FromImage(bmp);
         g.SmoothingMode = Gdi2.SmoothingMode.AntiAlias;
-        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
         g.Clear(Gdi.Color.Transparent);
 
-        float bx = shadowPx;
-        float by = shadowPx;
-        // 阴影：几层递减 alpha 的圆角，近似软边
-        for (int i = shadowPx; i >= 1; i--)
-        {
-            float t = i / (float)shadowPx;
-            int a = (int)(skin.Shadow.A * t * t);
-            using var path = RoundRect(bx - i, by - i + shadowOy, bubbleW + i * 2, bubbleH + i * 2, radius + i);
-            using var brush = new Gdi.SolidBrush(Gdi.Color.FromArgb(a, skin.Shadow));
-            g.FillPath(brush, path);
-        }
-
-        using (var path = RoundRect(bx, by, bubbleW, bubbleH, radius))
+        using (var path = RoundRect(0, 0, bubbleW, bubbleH, radius))
         {
             using (var brush = new Gdi.SolidBrush(skin.Fill))
                 g.FillPath(brush, path);
@@ -83,7 +68,7 @@ public static class TaskbarTipRenderer
         }
 
         using (var brush = new Gdi.SolidBrush(skin.Text))
-            g.DrawString(text, font, brush, new Gdi.RectangleF(bx + padH, by + padV, bubbleW - padH * 2, bubbleH - padV * 2));
+            g.DrawString(text, font, brush, new Gdi.RectangleF(padH, padV, bubbleW - padH * 2, bubbleH - padV * 2));
 
         return bmp;
     }

@@ -767,14 +767,13 @@ public sealed class TaskbarPillWindow : IDisposable
 
         using var bmp = TaskbarTipRenderer.Render(
             chip.Tip, TaskbarTipRenderer.SkinFor(IsLightTheme()), Scale,
-            out int fullW, out int fullH, out int shadowPx, out int bubbleW, out int bubbleH);
-        // PlaceTooltip 按气泡本体摆，窗口再外扩阴影边距
+            out int fullW, out int fullH, out int bubbleW, out int bubbleH);
         if (!TryChipScreenRect(chip, out var chipScreen)) return;
         var work = WorkAreaNearPill();
         int gap = (int)Math.Round(TipGapDip * Scale);
         var (tx, ty) = TaskbarLayout.PlaceTooltip(_taskbarRect, chipScreen, bubbleW, bubbleH, gap, work);
 
-        UploadTip(bmp, tx - shadowPx, ty - shadowPx, fullW, fullH);
+        UploadTip(bmp, tx, ty, fullW, fullH);
         Native.ShowWindow(_tipHwnd, Native.SW_SHOWNOACTIVATE);
         Native.SetWindowPos(_tipHwnd, Native.HWND_TOPMOST, 0, 0, 0, 0,
             Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE | Native.SWP_SHOWWINDOW);
