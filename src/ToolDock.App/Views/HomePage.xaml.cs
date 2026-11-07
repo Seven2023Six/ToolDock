@@ -32,8 +32,32 @@ public partial class HomePage : UserControl
             return;
         }
         MemUsageText.Text = memory.LoadPercent.ToString();
+        // 两列都用占比星号：used : free = percent : (100 - percent)，比例才正确
         MemUsedColumn.Width = new System.Windows.GridLength(memory.LoadPercent, System.Windows.GridUnitType.Star);
+        MemFreeColumn.Width = new System.Windows.GridLength(100 - memory.LoadPercent, System.Windows.GridUnitType.Star);
         MemFootnoteText.Text = $"已用 {memory.UsedGiB:0.0} / {memory.TotalGiB:0.0} GB";
+    }
+
+    private void CleanNow_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        var link = AgentLink.Instance;
+        if (link.Connected)
+        {
+            // confirmed=false：由 Agent 按「清理前确认」设置决定是否弹确认框
+            link.SendCleanNow(confirmed: false);
+        }
+        else
+        {
+            if (Core.CleanupCore.IsElevated())
+            {
+                var result = Core.CleanupCore.Clean(Core.CleanupCore.MaskDefault);
+                MemFootnoteText.Text = $"已释放 {result.FreedBytes / 1073741824.0:0.00} GB";
+            }
+            else
+            {
+                MemFootnoteText.Text = "独立模式无管理员权限，无法清理";
+            }
+        }
     }
 
     private static string ToChineseWeekDay(DayOfWeek day) => day switch

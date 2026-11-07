@@ -31,16 +31,16 @@
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition x:Name="MemUsedColumn" Width="0*" />
-                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition x:Name="MemFreeColumn" Width="100*" />
                             </Grid.ColumnDefinitions>
                             <Border CornerRadius="4" Background="{DynamicResource Accent}" />
                         </Grid>
                     </Border>
                     <TextBlock x:Name="MemFootnoteText" Text="已用 — / — GB"
                                Foreground="{DynamicResource Text.Secondary}" Margin="0,8,0,0" />
-                    <Button Style="{StaticResource PrimaryButtonStyle}" IsEnabled="False"
-                            HorizontalAlignment="Left" Margin="0,16,0,0" 
-                            ToolTip="等待内存清理插件与提权方案定案（里程碑 M2）">
+                    <Button x:Name="CleanButton" Style="{StaticResource PrimaryButtonStyle}"
+                            HorizontalAlignment="Left" Margin="0,16,0,0"
+                            Click="CleanNow_Click">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE74D;" Style="{StaticResource GlyphTextBlockStyle}" FontSize="14"
                                        VerticalAlignment="Center" />
