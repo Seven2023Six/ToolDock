@@ -7,8 +7,8 @@
       文字白色系，边框极淡，强调色保持蓝。
     -->
     <SolidColorBrush x:Key="Bg.Solid" Color="#FF1E1E1E" />
-    <SolidColorBrush x:Key="Side.Background" Color="#FF252525" />
-    <SolidColorBrush x:Key="Content.Background" Color="#FF1E1E1E" />
+    <SolidColorBrush x:Key="Side.Background" Color="#FF1E1E1E" />
+    <SolidColorBrush x:Key="Content.Background" Color="#FF252525" />
     <SolidColorBrush x:Key="Card.Background" Color="#FF2D2D2D" />
     <SolidColorBrush x:Key="Card.Stroke" Color="#FF3E3E3E" />
     <SolidColorBrush x:Key="Divider" Color="#FF3E3E3E" />

@@ -6,8 +6,8 @@
       键集合与 Dark.xaml 完全一致，ThemeService 整体替换实现切换。
     -->
     <SolidColorBrush x:Key="Bg.Solid" Color="#FFF3F3F3" />
-    <SolidColorBrush x:Key="Side.Background" Color="#80FFFFFF" />
-    <SolidColorBrush x:Key="Content.Background" Color="#00F3F3F3" />
+    <SolidColorBrush x:Key="Side.Background" Color="#00F3F3F3" />
+    <SolidColorBrush x:Key="Content.Background" Color="#80FFFFFF" />
     <SolidColorBrush x:Key="Card.Background" Color="#B3FFFFFF" />
     <SolidColorBrush x:Key="Card.Stroke" Color="#0F000000" />
     <SolidColorBrush x:Key="Divider" Color="#0F000000" />
