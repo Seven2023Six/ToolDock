@@ -8,6 +8,7 @@ internal static class NativeMethods
     public const uint WM_NULL = 0x0000;
     public const uint WM_DESTROY = 0x0002;
     public const uint WM_CLOSE = 0x0010;
+    public const uint WM_HOTKEY = 0x0312;
     public const uint WM_APP = 0x8000;
 
     public const uint NIM_ADD = 0;
@@ -162,6 +163,12 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     public static extern int TrackPopupMenu(IntPtr hMenu, uint uFlags, int x, int y,
         int nReserved, IntPtr hWnd, IntPtr prcRect);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     public static extern bool Shell_NotifyIconW(uint dwMessage, ref NOTIFYICONDATAW lpData);

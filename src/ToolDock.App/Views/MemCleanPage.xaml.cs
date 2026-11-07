@@ -31,6 +31,7 @@ public partial class MemCleanPage : UserControl
             MemoryPillToggle.IsChecked = Services.MemoryPillService.Instance.IsEnabled;
             ToolEnabledToggle.IsChecked = Services.UiSettings.Load().IsToolEnabled("memclean");
             _syncing = false;
+            ApplyToolEnabledState(ToolEnabledToggle.IsChecked == true, notify: false);
         };
         Unloaded += (_, _) => _timer.Stop();
     }
@@ -59,6 +60,8 @@ public partial class MemCleanPage : UserControl
         bool skip_uac;
         bool allow_freezes;
         bool confirm_clean;
+        bool bubble_results;
+        bool log_results;
 
         if (AgentLink.Instance.Connected)
         {
@@ -69,6 +72,8 @@ public partial class MemCleanPage : UserControl
             skip_uac = AgentLink.Instance.CurrentSkipUac;
             allow_freezes = AgentLink.Instance.CurrentAllowFreezes;
             confirm_clean = AgentLink.Instance.CurrentConfirmClean;
+            bubble_results = AgentLink.Instance.CurrentBubbleResults;
+            log_results = AgentLink.Instance.CurrentLogResults;
         }
         else
         {
@@ -80,6 +85,8 @@ public partial class MemCleanPage : UserControl
             skip_uac = settings.AutoCleanSkipUac;
             allow_freezes = settings.AutoCleanAllowFreezes;
             confirm_clean = settings.AutoCleanConfirm;
+            bubble_results = settings.AutoCleanBubble;
+            log_results = settings.AutoCleanLogResults;
         }
 
         // 规范化：避免历史/异常数据（阈值 0、间隔 0、掩码 0）在界面上呈现为「全空」
@@ -107,6 +114,14 @@ public partial class MemCleanPage : UserControl
         SkipUacToggle.IsChecked = skip_uac;
         AllowFreezesToggle.IsChecked = allow_freezes;
         ConfirmCleanToggle.IsChecked = confirm_clean;
+        // 热键预设映射（0=关闭）
+        uint hk_mods = AgentLink.Instance.Connected ? AgentLink.Instance.CurrentHotkeyMods : Core.AppSettings.Load().HotkeyCleanMods;
+        uint hk_vk = AgentLink.Instance.Connected ? AgentLink.Instance.CurrentHotkeyVk : Core.AppSettings.Load().HotkeyCleanVk;
+        bool hk_on = AgentLink.Instance.Connected ? AgentLink.Instance.CurrentHotkeyEnabled : Core.AppSettings.Load().HotkeyCleanEnabled;
+        HotkeyBox.SelectedIndex = hk_on ? PresetIndexFor(hk_mods, hk_vk) : 0;
+
+        BubbleToggle.IsChecked = bubble_results;
+        LogResultsToggle.IsChecked = log_results;
 
         _syncing = false;
     }
@@ -157,6 +172,8 @@ public partial class MemCleanPage : UserControl
         uint interval = ReadInterval();
         bool allow_freezes = AllowFreezesToggle.IsChecked == true;
         bool confirm_clean = ConfirmCleanToggle.IsChecked == true;
+        bool bubble_results = BubbleToggle.IsChecked == true;
+        bool log_results = LogResultsToggle.IsChecked == true;
 
         // 输入越界时把规范化值写回输入框（避免界面停留在 "0" 这类无效值）
         if (ThresholdBox.Text != threshold.ToString())
@@ -170,7 +187,7 @@ public partial class MemCleanPage : UserControl
 
         if (AgentLink.Instance.Connected)
         {
-            AgentLink.Instance.SendCleanCfg(mask, auto_clean, threshold, interval, allow_freezes, confirm_clean);
+            AgentLink.Instance.SendCleanCfg(mask, auto_clean, threshold, interval, allow_freezes, confirm_clean, bubble_results, log_results);
         }
         else
         {
@@ -181,6 +198,8 @@ public partial class MemCleanPage : UserControl
             settings.AutoCleanIntervalMinutes = interval;
             settings.AutoCleanAllowFreezes = allow_freezes;
             settings.AutoCleanConfirm = confirm_clean;
+            settings.AutoCleanBubble = bubble_results;
+            settings.AutoCleanLogResults = log_results;
             settings.Save();
         }
     }
@@ -193,7 +212,94 @@ public partial class MemCleanPage : UserControl
         {
             return;
         }
-        Services.UiSettings.Load().SetToolEnabled("memclean", ToolEnabledToggle.IsChecked == true);
+        bool enabled = ToolEnabledToggle.IsChecked == true;
+        Services.UiSettings.Load().SetToolEnabled("memclean", enabled);
+        ApplyToolEnabledState(enabled, notify: true);
+    }
+
+    /// <summary>工具停用：内容区整体禁用变灰、贴片下线、Agent 撤掉托盘入口并停止自动清理。</summary>
+    private void ApplyToolEnabledState(bool enabled, bool notify)
+    {
+        if (ToolContent is not null)
+        {
+            ToolContent.IsEnabled = enabled;
+            ToolContent.Opacity = enabled ? 1.0 : 0.45;
+        }
+        if (CleanButton is not null)
+        {
+            CleanButton.IsEnabled = enabled;
+        }
+        Services.MemoryPillService.Instance.ApplyToolState(enabled);
+
+        if (notify && AgentLink.Instance.Connected)
+        {
+            AgentLink.Instance.SendToolEnabled(enabled);
+        }
+    }
+
+    private static int PresetIndexFor(uint mods, uint vk)
+    {
+        if (mods == 0x0002 && vk == 0x70) return 1;
+        if (mods == 0x0003 && vk == 0x4D) return 2;
+        if (mods == 0x0006 && vk == 0x78) return 3;
+        return 1;
+    }
+
+    private static (bool Enabled, uint Mods, uint Vk) PresetAt(int index) => index switch
+    {
+        1 => (true, 0x0002u, 0x70u),
+        2 => (true, 0x0003u, 0x4Du),
+        3 => (true, 0x0006u, 0x78u),
+        _ => (false, 0x0002u, 0x70u),
+    };
+
+    private void Hotkey_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (_syncing || HotkeyBox is null)
+        {
+            return;
+        }
+        var (enabled, mods, vk) = PresetAt(HotkeyBox.SelectedIndex);
+        if (AgentLink.Instance.Connected)
+        {
+            AgentLink.Instance.SendHotkey(enabled, mods, vk);
+        }
+        else
+        {
+            var settings = Core.AppSettings.Load();
+            settings.HotkeyCleanEnabled = enabled;
+            settings.HotkeyCleanMods = mods;
+            settings.HotkeyCleanVk = vk;
+            settings.Save();
+        }
+    }
+
+    private void Bubble_Click(object sender, RoutedEventArgs e) => SendConfig();
+
+    private void LogResults_Click(object sender, RoutedEventArgs e) => SendConfig();
+
+    /// <summary>恢复 Mem Reduct 默认值：区域 0xE7、自动清理关、阈值 90、间隔 30、确认与气泡开。</summary>
+    private void ResetDefaults_Click(object sender, RoutedEventArgs e)
+    {
+        const string message = "恢复默认清理设置？区域 0xE7、自动清理关闭、阈值 90、间隔 30 分钟、清理前确认开启";
+        if (MessageBox.Show(message, "工具坞 · 内存清理", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK)
+        {
+            return;
+        }
+
+        _syncing = true;
+        SetRegionCheckboxes(CleanupCore.MaskDefault);
+        ThresholdToggle.IsChecked = false;
+        IntervalToggle.IsChecked = false;
+        ThresholdBox.Text = "90";
+        IntervalBox.Text = "30";
+        AllowFreezesToggle.IsChecked = false;
+        ConfirmCleanToggle.IsChecked = true;
+        BubbleToggle.IsChecked = true;
+        LogResultsToggle.IsChecked = false;
+        _syncing = false;
+
+        SendConfig();
     }
 
     private void MemoryPill_Changed(object sender, RoutedEventArgs e)

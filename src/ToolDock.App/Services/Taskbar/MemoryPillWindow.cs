@@ -297,7 +297,7 @@ internal sealed class MemoryPillWindow : IDisposable
             }
 
             string label = percent + "%";
-            using var font = new Gdi.Font("Microsoft YaHei UI", (float)(_pillH * 0.42f), Gdi.FontStyle.Bold, Gdi.GraphicsUnit.Pixel);
+            using var font = new Gdi.Font("Microsoft YaHei UI", (float)(_pillH * 0.42f), Gdi.FontStyle.Regular, Gdi.GraphicsUnit.Pixel);
             using var textBrush = new Gdi.SolidBrush(skin.Text);
             var format = new Gdi.StringFormat
             {

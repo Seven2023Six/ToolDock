@@ -5,6 +5,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -33,25 +34,26 @@
             </Button>
         </Grid>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" FocusVisualStyle="{x:Null}">
-            <StackPanel Margin="20,16,20,16">
+            <!-- 工具开关（决定是否出现在「内置工具」里可用） -->
+        <Border Grid.Row="1" Margin="20,12,20,0" Style="{StaticResource SettingsCardStyle}">
+                <Grid Margin="0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="启用内存清理工具" Style="{StaticResource RowTitleStyle}" />
+                        <TextBlock Text="停用后「内置工具」里该卡片显示为已停用" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
+                    </StackPanel>
+                    <ToggleButton x:Name="ToolEnabledToggle" Grid.Column="1" Style="{StaticResource SwitchStyle}"
+                                  Checked="ToolEnabled_Changed" Unchecked="ToolEnabled_Changed"
+                                  VerticalAlignment="Center" />
+                </Grid>
+            </Border>
 
-                <!-- 工具开关（决定是否出现在「内置工具」里可用） -->
-                <Border Style="{StaticResource SettingsCardStyle}" Margin="0,0,0,12">
-                    <Grid Margin="0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                            <TextBlock Text="启用内存清理工具" Style="{StaticResource RowTitleStyle}" />
-                            <TextBlock Text="停用后「内置工具」里该卡片显示为已停用" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
-                        </StackPanel>
-                        <ToggleButton x:Name="ToolEnabledToggle" Grid.Column="1" Style="{StaticResource SwitchStyle}"
-                                      Checked="ToolEnabled_Changed" Unchecked="ToolEnabled_Changed"
-                                      VerticalAlignment="Center" />
-                    </Grid>
-                </Border>
+
+        <ScrollViewer Grid.Row="2" x:Name="ToolContent" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" FocusVisualStyle="{x:Null}">
+            <StackPanel Margin="20,16,20,16">
 
                 <!-- 单条整体内存 -->
                 <Border Style="{StaticResource CardStyle}" Padding="16,14">
@@ -74,6 +76,8 @@
                         </Border>
                         <TextBlock x:Name="MemFootnoteText" Text="已用 — / — GB"
                                    Style="{StaticResource CardFootnoteStyle}" Margin="0,6,0,0" />
+                        <TextBlock x:Name="GroupsText" Text="页面文件 — · 系统缓存 —"
+                                   Style="{StaticResource CardFootnoteStyle}" Margin="0,2,0,0" />
                     </StackPanel>
                 </Border>
 
@@ -175,6 +179,73 @@
                                           Click="SkipUac_Click" VerticalAlignment="Center" />
                         </Grid>
                     </StackPanel>
+                </Border>
+
+                <!-- 提示与日志 -->
+                <TextBlock Text="提示与日志" Style="{StaticResource SectionTitleStyle}" Margin="2,16,0,8" />
+                <Border Style="{StaticResource SettingsCardStyle}">
+                    <StackPanel>
+                        <Grid Margin="0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="清理后弹气泡提示" Style="{StaticResource RowTitleStyle}" />
+                                <TextBlock Text="显示本次释放的内存量" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <ToggleButton x:Name="BubbleToggle" Grid.Column="1" Style="{StaticResource SwitchStyle}"
+                                          Click="Bubble_Click" VerticalAlignment="Center" />
+                        </Grid>
+                        <Border Style="{StaticResource RowDividerStyle}" />
+                        <Grid Margin="0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="把清理结果写入日志" Style="{StaticResource RowTitleStyle}" />
+                                <TextBlock Text="每次清理记录释放量与失败区域" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <ToggleButton x:Name="LogResultsToggle" Grid.Column="1" Style="{StaticResource SwitchStyle}"
+                                          Click="LogResults_Click" VerticalAlignment="Center" />
+                        </Grid>
+                        <Border Style="{StaticResource RowDividerStyle}" />
+                        <Grid Margin="0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="全局热键清理" Style="{StaticResource RowTitleStyle}" />
+                                <TextBlock Text="任意程序前台时按组合键直接清理，不弹确认" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <ComboBox x:Name="HotkeyBox" Grid.Column="1" Width="160" Height="32"
+                                      VerticalContentAlignment="Center" SelectionChanged="Hotkey_Changed">
+                                <ComboBoxItem Content="关闭" />
+                                <ComboBoxItem Content="Ctrl + F1" />
+                                <ComboBoxItem Content="Ctrl + Alt + M" />
+                                <ComboBoxItem Content="Ctrl + Shift + F9" />
+                            </ComboBox>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 重置 -->
+                <TextBlock Text="重置" Style="{StaticResource SectionTitleStyle}" Margin="2,16,0,8" />
+                <Border Style="{StaticResource SettingsCardStyle}">
+                    <Grid Margin="0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock Text="恢复默认设置" Style="{StaticResource RowTitleStyle}" />
+                            <TextBlock Text="区域回到默认 0xE7，自动清理关闭，阈值 90、间隔 30 分" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="恢复默认" MinWidth="96" Height="32" Padding="12,0"
+                                Style="{StaticResource AppButtonStyle}" Click="ResetDefaults_Click" />
+                    </Grid>
                 </Border>
 
                 <!-- 任务栏贴片 -->

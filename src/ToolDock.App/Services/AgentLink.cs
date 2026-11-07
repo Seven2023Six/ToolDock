@@ -35,6 +35,11 @@ internal sealed class AgentLink : IDisposable
     public bool CurrentSkipUac { get; set; }
     public bool CurrentAllowFreezes { get; set; }
     public bool CurrentConfirmClean { get; set; } = true;
+    public bool CurrentBubbleResults { get; set; } = true;
+    public bool CurrentHotkeyEnabled { get; set; }
+    public uint CurrentHotkeyMods { get; set; } = 0x0002;
+    public uint CurrentHotkeyVk { get; set; } = 0x70;
+    public bool CurrentLogResults { get; set; }
 
     /// <summary>Agent 下发的窗口材质（连接成功时有效），随设置变更更新。</summary>
     public string CurrentBackdrop { get; set; } = "Mica";
@@ -90,6 +95,11 @@ internal sealed class AgentLink : IDisposable
             CurrentSkipUac = welcome.SkipUac;
             CurrentAllowFreezes = welcome.AllowFreezes;
             CurrentConfirmClean = welcome.ConfirmClean;
+            CurrentBubbleResults = welcome.BubbleResults;
+            CurrentHotkeyEnabled = welcome.HotkeyEnabled;
+            CurrentHotkeyMods = welcome.HotkeyMods;
+            CurrentHotkeyVk = welcome.HotkeyVk;
+            CurrentLogResults = welcome.LogResults;
             _ = ReadLoopAsync(pipe);
         }
         catch (TimeoutException)
@@ -196,7 +206,7 @@ internal sealed class AgentLink : IDisposable
     }
 
     /// <summary>清理配置（区域掩码 + 自动策略）下发 Agent（发射后不管）。</summary>
-    public void SendCleanCfg(ulong mask, bool autoClean, uint threshold, uint intervalMinutes, bool allowFreezes, bool confirmClean)
+    public void SendCleanCfg(ulong mask, bool autoClean, uint threshold, uint intervalMinutes, bool allowFreezes, bool confirmClean, bool bubbleResults = true, bool logResults = false)
     {
         if (!Connected || _pipe is null)
         {
@@ -219,6 +229,8 @@ internal sealed class AgentLink : IDisposable
                         IntervalM = intervalMinutes,
                         AllowFreezes = allowFreezes,
                         ConfirmClean = confirmClean,
+                        BubbleResults = bubbleResults,
+                        LogResults = logResults,
                     }, CancellationToken.None).ConfigureAwait(false);
                 }
                 finally
@@ -249,6 +261,71 @@ internal sealed class AgentLink : IDisposable
                 try
                 {
                     await PipeFrame.WriteAsync(pipe, new PipeMessage { T = "setSkipUac", Enable = enabled }, CancellationToken.None)
+                        .ConfigureAwait(false);
+                }
+                finally
+                {
+                    _writeGate.Release();
+                }
+            }
+            catch (Exception exception) when (exception is IOException or InvalidOperationException or ObjectDisposedException)
+            {
+                Connected = false;
+            }
+        });
+    }
+
+    /// <summary>全局热键清理配置下发 Agent。</summary>
+    public void SendHotkey(bool enabled, uint modifiers, uint virtualKey)
+    {
+        if (!Connected || _pipe is null)
+        {
+            return;
+        }
+        var pipe = _pipe;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _writeGate.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    await PipeFrame.WriteAsync(pipe, new PipeMessage
+                    {
+                        T = "setHotkey",
+                        HotkeyEnabled = enabled,
+                        HotkeyMods = modifiers,
+                        HotkeyVk = virtualKey,
+                    }, CancellationToken.None).ConfigureAwait(false);
+                }
+                finally
+                {
+                    _writeGate.Release();
+                }
+            }
+            catch (Exception exception) when (exception is IOException or InvalidOperationException or ObjectDisposedException)
+            {
+                Connected = false;
+            }
+        });
+    }
+
+    /// <summary>工具总开关下发 Agent（停用后移除托盘入口、停止自动清理）。</summary>
+    public void SendToolEnabled(bool enabled)
+    {
+        if (!Connected || _pipe is null)
+        {
+            return;
+        }
+        var pipe = _pipe;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _writeGate.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    await PipeFrame.WriteAsync(pipe, new PipeMessage { T = "setToolEnabled", Enable = enabled }, CancellationToken.None)
                         .ConfigureAwait(false);
                 }
                 finally

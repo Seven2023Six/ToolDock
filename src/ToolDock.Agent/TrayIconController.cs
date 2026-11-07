@@ -68,6 +68,51 @@ internal sealed class TrayIconController : IDisposable
 
     public void AddPluginItem(string text, Action action) => _pluginItems.Add((text, action));
 
+    /// <summary>移除指定文字的插件菜单项（工具被停用时把入口一并撤掉）。</summary>
+    private readonly Dictionary<int, Action> _hotkeys = new();
+    private int _nextHotkeyId = 0x2000;
+
+    /// <summary>注册全局热键（挂在托盘消息窗口上）；返回的 IDisposable 用于注销。</summary>
+    public IDisposable RegisterHotkey(uint modifiers, uint virtualKey, Action callback)
+    {
+        int id = _nextHotkeyId++;
+        if (!NativeMethods.RegisterHotKey(_hwnd, id, modifiers, virtualKey))
+        {
+            return new NullDisposable();
+        }
+        _hotkeys[id] = callback;
+        return new HotkeyHandle(this, id);
+    }
+
+    private void UnregisterHotkey(int id)
+    {
+        if (_hotkeys.Remove(id))
+        {
+            NativeMethods.UnregisterHotKey(_hwnd, id);
+        }
+    }
+
+    private sealed class HotkeyHandle(TrayIconController owner, int id) : IDisposable
+    {
+        private bool _disposed;
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            owner.UnregisterHotkey(id);
+        }
+    }
+
+    private sealed class NullDisposable : IDisposable
+    {
+        public void Dispose()
+        {
+        }
+    }
+
+    public void RemovePluginItem(string text)
+        => _pluginItems.RemoveAll(item => string.Equals(item.Text, text, StringComparison.Ordinal));
+
     public void UpdateStatusLine(string pluginId, string? text)
     {
         if (text is null)
@@ -237,6 +282,16 @@ internal sealed class TrayIconController : IDisposable
         {
             self._added = false;
             self.AddIcon();
+            return IntPtr.Zero;
+        }
+
+        if (msg == NativeMethods.WM_HOTKEY)
+        {
+            int id = (int)wParam.ToInt64();
+            if (self._hotkeys.TryGetValue(id, out var callback))
+            {
+                callback();
+            }
             return IntPtr.Zero;
         }
 

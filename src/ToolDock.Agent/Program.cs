@@ -25,6 +25,27 @@ internal static class Program
 
     private static int Run(string[] args)
     {
+        // 命令行清理（对齐 Mem Reduct /clean）：/clean [掩码] —— 需要管理员权限，不启动托盘
+        int cleanIndex = Array.FindIndex(args, a =>
+            a.Equals("/clean", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("--clean", StringComparison.OrdinalIgnoreCase));
+        if (cleanIndex >= 0)
+        {
+            if (!CleanupCore.IsElevated())
+            {
+                LogFile.Write("[agent] /clean 需要管理员权限");
+                return 2;
+            }
+            ulong mask = CleanupCore.MaskDefault;
+            if (cleanIndex + 1 < args.Length && ulong.TryParse(args[cleanIndex + 1], out var parsed))
+            {
+                mask = parsed;
+            }
+            var result = CleanupCore.Clean(mask);
+            LogFile.Write($"[agent] 命令行清理完成 mask=0x{mask:X} 释放 {result.FreedBytes / 1048576.0:0} MB");
+            return 0;
+        }
+
         using var guard = new SingleInstanceGuard("ToolDock.Agent.SingleInstance");
         if (!guard.Acquired)
         {

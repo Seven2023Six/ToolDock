@@ -11,7 +11,7 @@ internal sealed class PluginContext(string pluginId, TrayIconController tray) : 
     public ITrayService Tray { get; } = new TrayServiceAdapter(tray, pluginId);
     public INotificationService Notify { get; } = new BalloonNotifier(tray);
     public ISettingsStore Settings { get; } = new JsonFileSettingsStore(pluginId);
-    public IHotkeyService Hotkeys { get; } = new HotkeyStub();
+    public IHotkeyService Hotkeys { get; } = new TrayHotkeyService(tray);
     public IElevationService Elevation { get; } = new ElevationService();
     public ILogger Log { get; } = new FileLogger(pluginId);
 }
@@ -19,6 +19,8 @@ internal sealed class PluginContext(string pluginId, TrayIconController tray) : 
 internal sealed class TrayServiceAdapter(TrayIconController tray, string pluginId) : ITrayService
 {
     public void AddMenu(string header, Action onClick) => tray.AddPluginItem(header, onClick);
+
+    public void RemoveMenu(string header) => tray.RemovePluginItem(header);
 
     public void SetStatusLine(string? text) => tray.UpdateStatusLine(pluginId, text);
 }
@@ -123,6 +125,13 @@ internal sealed class JsonFileSettingsStore(string pluginId) : ISettingsStore
 }
 
 /// <summary>全局热键在轮盘/快捷面板里程碑接入；先给占位实现防插件炸。</summary>
+/// <summary>真实全局热键：注册在托盘消息窗口上，WM_HOTKEY 回调插件的清理入口。</summary>
+internal sealed class TrayHotkeyService(TrayIconController tray) : IHotkeyService
+{
+    public IDisposable Register(int modifiers, int virtualKey, Action callback)
+        => tray.RegisterHotkey((uint)modifiers, (uint)virtualKey, callback);
+}
+
 internal sealed class HotkeyStub : IHotkeyService
 {
     public IDisposable Register(int modifiers, int virtualKey, Action callback)

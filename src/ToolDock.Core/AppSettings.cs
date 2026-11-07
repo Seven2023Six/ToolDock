@@ -38,6 +38,21 @@ public sealed class AppSettings
     /// <summary>内存清理：手动清理前确认（对齐 Mem Reduct IsShowReductConfirmation，默认 true）。</summary>
     public bool AutoCleanConfirm { get; set; } = true;
 
+    /// <summary>内存清理：全局热键清理开关。</summary>
+    public bool HotkeyCleanEnabled { get; set; }
+
+    /// <summary>内存清理：热键修饰键（MOD_ALT=1 / MOD_CONTROL=2 / MOD_SHIFT=4）。</summary>
+    public uint HotkeyCleanMods { get; set; } = 0x0002;
+
+    /// <summary>内存清理：热键虚拟键码（VK_F1=0x70）。</summary>
+    public uint HotkeyCleanVk { get; set; } = 0x70;
+
+    /// <summary>内存清理：清理后弹气泡（对齐 Mem Reduct BalloonCleanResults，默认 true）。</summary>
+    public bool AutoCleanBubble { get; set; } = true;
+
+    /// <summary>内存清理：清理结果写入日志（对齐 Mem Reduct LogCleanResults，默认 false）。</summary>
+    public bool AutoCleanLogResults { get; set; }
+
     private static string DirectoryPath =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ToolDock");
 

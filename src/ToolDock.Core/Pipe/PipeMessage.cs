@@ -44,6 +44,21 @@ public sealed class PipeMessage
     /// <summary>cleanNow：发起方是否已确认。true 跳过 Agent 端确认框（App 已确认）。</summary>
     public bool Confirmed { get; set; }
 
+    /// <summary>全局热键清理：是否启用（welcome / setHotkey）。</summary>
+    public bool HotkeyEnabled { get; set; }
+
+    /// <summary>热键修饰键（MOD_ALT=1 / MOD_CONTROL=2 / MOD_SHIFT=4）。</summary>
+    public uint HotkeyMods { get; set; }
+
+    /// <summary>热键虚拟键码（VK_F1=0x70 等）。</summary>
+    public uint HotkeyVk { get; set; }
+
+    /// <summary>清理后弹气泡提示（welcome / setCleanCfg）。</summary>
+    public bool BubbleResults { get; set; } = true;
+
+    /// <summary>把清理结果写入日志（welcome / setCleanCfg）。</summary>
+    public bool LogResults { get; set; }
+
     /// <summary>通知标题（notify）。</summary>
     public string? Title { get; set; }
 

@@ -126,7 +126,7 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                     };
                     if (memclean is not null)
                     {
-                        var (mask, autoclean, threshold, interval, skipuac, allowfreezes, confirmclean) = memclean.GetCleanState();
+                        var (mask, autoclean, threshold, interval, skipuac, allowfreezes, confirmclean, bubble, logres) = memclean.GetCleanState();
                         welcome.Mask = mask;
                         welcome.AutoClean = autoclean;
                         welcome.Threshold = threshold;
@@ -134,6 +134,12 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                         welcome.SkipUac = skipuac;
                         welcome.AllowFreezes = allowfreezes;
                         welcome.ConfirmClean = confirmclean;
+                        welcome.BubbleResults = bubble;
+                        var hotkey = memclean.GetHotkey();
+                        welcome.HotkeyEnabled = hotkey.Enabled;
+                        welcome.HotkeyMods = hotkey.Mods;
+                        welcome.HotkeyVk = hotkey.Vk;
+                        welcome.LogResults = logres;
                     }
                 }
             }
@@ -165,7 +171,7 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                         };
                         if (memclean is not null)
                         {
-                            var (mask, autoclean, threshold, interval, skipuac, allowfreezes, confirmclean) = memclean.GetCleanState();
+                            var (mask, autoclean, threshold, interval, skipuac, allowfreezes, confirmclean, bubble, logres) = memclean.GetCleanState();
                             reply.Mask = mask;
                             reply.AutoClean = autoclean;
                             reply.Threshold = threshold;
@@ -173,6 +179,12 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                             reply.SkipUac = skipuac;
                             reply.AllowFreezes = allowfreezes;
                             reply.ConfirmClean = confirmclean;
+                        reply.BubbleResults = bubble;
+                        var hotkey2 = memclean.GetHotkey();
+                        reply.HotkeyEnabled = hotkey2.Enabled;
+                        reply.HotkeyMods = hotkey2.Mods;
+                        reply.HotkeyVk = hotkey2.Vk;
+                        reply.LogResults = logres;
                         }
                         await PipeFrame.WriteAsync(server, reply, cancellationToken);
                         break;
@@ -194,7 +206,7 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                         }
                         break;
                     case "setCleanCfg":
-                        memclean?.ApplyConfig(message.Mask, message.AutoClean, message.Threshold, message.IntervalM, message.SkipUac, message.AllowFreezes, message.ConfirmClean);
+                        memclean?.ApplyConfig(message.Mask, message.AutoClean, message.Threshold, message.IntervalM, message.SkipUac, message.AllowFreezes, message.ConfirmClean, message.BubbleResults, message.LogResults);
                         LogFile.Write($"[pipe] 清理配置已更新：mask=0x{message.Mask:X} 自动={message.AutoClean} 阈值={message.Threshold}% 间隔={message.IntervalM}分 免UAC={message.SkipUac} 自动含冻结区={message.AllowFreezes} 清理确认={message.ConfirmClean}");
                         break;
                     case "cleanNow":
@@ -209,6 +221,14 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                         break;
                     case "batteryStatus":
                         tray.UpdateStatusLine("battery", string.IsNullOrWhiteSpace(message.Text) ? null : message.Text);
+                        break;
+                    case "setHotkey":
+                        memclean?.SetHotkey(message.HotkeyEnabled, message.HotkeyMods, message.HotkeyVk);
+                        LogFile.Write($"[pipe] 热键清理：{message.HotkeyEnabled} mods=0x{message.HotkeyMods:X} vk=0x{message.HotkeyVk:X}");
+                        break;
+                    case "setToolEnabled":
+                        memclean?.SetEnabled(message.Enable);
+                        LogFile.Write($"[pipe] 内存清理工具启用状态：{message.Enable}");
                         break;
                     case "setAutoStart":
                         AutoStartManager.Apply(message.Enable, agentExePath);

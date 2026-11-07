@@ -17,6 +17,9 @@ public interface ITrayService
     /// <summary>往托盘右键菜单里加一项（位于"退出"上方）。</summary>
     void AddMenu(string header, Action onClick);
 
+    /// <summary>移除该文字对应的菜单项（工具停用时撤掉入口）。</summary>
+    void RemoveMenu(string header);
+
     /// <summary>设置本插件在托盘 tooltip 里的状态行（如"蓝牙耳机 72%"），传 null 清除。</summary>
     void SetStatusLine(string? text);
 }

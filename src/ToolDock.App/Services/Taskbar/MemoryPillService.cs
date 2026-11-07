@@ -77,7 +77,7 @@ internal sealed class MemoryPillService
             return;
         }
         var settings = UiSettings.Load();
-        if (!settings.MemoryPillEnabled)
+        if (!settings.MemoryPillEnabled || !settings.IsToolEnabled("memclean"))
         {
             return;
         }
@@ -87,7 +87,7 @@ internal sealed class MemoryPillService
     public void Refresh()
     {
         var settings = UiSettings.Load();
-        if (!settings.MemoryPillEnabled)
+        if (!settings.MemoryPillEnabled || !settings.IsToolEnabled("memclean"))
         {
             Stop();
             return;
@@ -95,6 +95,19 @@ internal sealed class MemoryPillService
         if (_window is null)
         {
             Attach();
+        }
+    }
+
+    /// <summary>工具总开关变化时调用：停用即下线贴片，重新启用则按贴片开关恢复。</summary>
+    public void ApplyToolState(bool toolEnabled)
+    {
+        if (toolEnabled)
+        {
+            Refresh();
+        }
+        else
+        {
+            Stop();
         }
     }
 

@@ -34,6 +34,13 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
     private uint _intervalMinutes = 30;
     private bool _allowStandbyAuto;
     private bool _confirmClean = true;
+    private bool _hotkeyEnabled;
+    private uint _hotkeyMods;
+    private uint _hotkeyVk;
+    private IDisposable? _hotkey;
+    private bool _bubbleResults = true;
+    private bool _logResults;
+    private bool _enabled = true;
     private DateTime _lastClean = DateTime.UtcNow;
     private DateTime _lastAutoHint = DateTime.MinValue;
     private System.Threading.Timer? _autoTimer;
@@ -51,8 +58,17 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
         _allowStandbyAuto = context.Settings.Get("AllowFreezes", false);
         _confirmClean = context.Settings.Get("ConfirmClean", true);
 
-        context.Tray.AddMenu("立即清理内存", () => CleanNowExternal(confirmed: false));
-        context.Tray.SetStatusLine("内存清理就绪");
+        _hotkeyEnabled = context.Settings.Get("HotkeyEnabled", false);
+        _hotkeyMods = context.Settings.Get("HotkeyMods", (uint)0x0002);
+        _hotkeyVk = context.Settings.Get("HotkeyVk", (uint)0x70);
+        _bubbleResults = context.Settings.Get("BubbleResults", true);
+        _logResults = context.Settings.Get("LogResults", false);
+        _enabled = context.Settings.Get("Enabled", true);
+        if (_enabled)
+        {
+            context.Tray.AddMenu(MenuText, () => CleanNowExternal(confirmed: false));
+            context.Tray.SetStatusLine("内存清理就绪");
+        }
 
         // 免 UAC 任务跨会话持久：启动时校验存在性/掩码，缺失或过期才重建（重建需提权，能免则免）
         if (_skipUac)
@@ -60,25 +76,88 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
             Task.Run(EnsureTasks);
         }
 
+        ApplyHotkey();
+
         _autoTimer = new System.Threading.Timer(_ => AutoTick(), null, TimeSpan.FromSeconds(30), TimeSpan.FromMinutes(1));
 
         context.Log.Info($"已启动（mask=0x{_mask:X} 自动清理={_autoClean} 阈值={_threshold}% 间隔={_intervalMinutes}分 免UAC={_skipUac} 自动含冻结区={_allowStandbyAuto} 清理确认={_confirmClean}）");
         return Task.CompletedTask;
     }
 
+    private const string MenuText = "立即清理内存";
+
+    /// <summary>工具总开关：停用后移除托盘入口与状态行，自动清理与手动清理都不再执行。</summary>
+    public void SetEnabled(bool enabled)
+    {
+        if (_enabled == enabled)
+        {
+            return;
+        }
+        _enabled = enabled;
+        _context?.Settings.Set("Enabled", enabled);
+        Persist();
+
+        if (_context is { } context)
+        {
+            if (enabled)
+            {
+                context.Tray.AddMenu(MenuText, () => CleanNowExternal(confirmed: false));
+                UpdateStatusLine();
+            }
+            else
+            {
+                context.Tray.RemoveMenu(MenuText);
+                context.Tray.SetStatusLine(null);
+            }
+        }
+        _context?.Log.Info("内存清理工具已" + (enabled ? "启用" : "停用"));
+    }
+
+    public bool IsEnabled => _enabled;
+
     public Task ShutdownAsync()
     {
+        _hotkey?.Dispose();
+        _hotkey = null;
         _autoTimer?.Dispose();
         return Task.CompletedTask;
     }
 
+    /// <summary>按当前设置注册/注销全局热键（热键清理不走确认框，与 Mem Reduct SOURCE_HOTKEY 一致）。</summary>
+    private void ApplyHotkey()
+    {
+        _hotkey?.Dispose();
+        _hotkey = null;
+
+        if (!_hotkeyEnabled || _context is null)
+        {
+            return;
+        }
+        _hotkey = _context.Hotkeys.Register((int)_hotkeyMods, (int)_hotkeyVk, () => CleanNowExternal(confirmed: true));
+        _context.Log.Info($"热键清理已注册（mods=0x{_hotkeyMods:X} vk=0x{_hotkeyVk:X}）");
+    }
+
+    /// <summary>设置页下发热键配置。</summary>
+    public void SetHotkey(bool enabled, uint modifiers, uint virtualKey)
+    {
+        _hotkeyEnabled = enabled;
+        _hotkeyMods = modifiers;
+        _hotkeyVk = virtualKey;
+        Persist();
+        ApplyHotkey();
+    }
+
+    public (bool Enabled, uint Mods, uint Vk) GetHotkey() => (_hotkeyEnabled, _hotkeyMods, _hotkeyVk);
+
     // ---- 配置（App 经管道下发）----
 
-    public (ulong Mask, bool AutoClean, uint Threshold, uint IntervalMinutes, bool SkipUac, bool AllowFreezes, bool ConfirmClean) GetCleanState()
-        => (_mask, _autoClean, _threshold, _intervalMinutes, _skipUac, _allowStandbyAuto, _confirmClean);
+    public (ulong Mask, bool AutoClean, uint Threshold, uint IntervalMinutes, bool SkipUac, bool AllowFreezes, bool ConfirmClean, bool BubbleResults, bool LogResults) GetCleanState()
+        => (_mask, _autoClean, _threshold, _intervalMinutes, _skipUac, _allowStandbyAuto, _confirmClean, _bubbleResults, _logResults);
 
-    public void ApplyConfig(ulong mask, bool autoClean, uint threshold, uint intervalMinutes, bool skipUac, bool allowFreezes, bool confirmClean)
+    public void ApplyConfig(ulong mask, bool autoClean, uint threshold, uint intervalMinutes, bool skipUac, bool allowFreezes, bool confirmClean, bool bubbleResults, bool logResults)
     {
+        _bubbleResults = bubbleResults;
+        _logResults = logResults;
         bool skip_uac_before = _skipUac;
         _mask = mask;
         _autoClean = autoClean;
@@ -151,7 +230,7 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
 
             UpdateStatusLine();
 
-            if (!_autoClean)
+            if (!_enabled || !_autoClean)
             {
                 return;
             }
@@ -174,7 +253,7 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
     {
         lock (_gate)
         {
-            if (_context is not { } context)
+            if (_context is not { } context || !_enabled)
             {
                 return;
             }
@@ -296,9 +375,15 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
             summary += $"（{failed.Count} 项失败）";
         }
 
-        context.Notify.Show("内存清理", summary);
+        if (_bubbleResults)
+        {
+            context.Notify.Show("内存清理", summary);
+        }
         context.Tray.SetStatusLine($"内存 {CleanupCore.ReadMemorySnapshot()?.LoadPercent ?? 0}% · 已释放 {FormatBytes(freed)}");
-        context.Log.Info($"清理完成（{source}{(flushed_via_helper ? "，经提权助手" : "")}）：释放 {FormatBytes(freed)}");
+        if (_logResults)
+        {
+            context.Log.Info($"清理完成（{source}{(flushed_via_helper ? "，经提权助手" : "")}）：释放 {FormatBytes(freed)}");
+        }
 
         if (failed is { Count: > 0 })
         {
@@ -558,6 +643,11 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
             _context.Settings.Set("SkipUac", _skipUac);
             _context.Settings.Set("AllowFreezes", _allowStandbyAuto);
             _context.Settings.Set("ConfirmClean", _confirmClean);
+            _context.Settings.Set("HotkeyEnabled", _hotkeyEnabled);
+            _context.Settings.Set("HotkeyMods", (long)_hotkeyMods);
+            _context.Settings.Set("HotkeyVk", (long)_hotkeyVk);
+            _context.Settings.Set("BubbleResults", _bubbleResults);
+            _context.Settings.Set("LogResults", _logResults);
             _context.Settings.SaveAsync().GetAwaiter().GetResult();
         }
         catch (Exception exception)
