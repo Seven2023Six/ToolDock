@@ -26,6 +26,7 @@
   <ItemGroup>
     <Resource Include="..\..\assets\app.ico" Link="app.ico" />
     <Resource Include="..\..\assets\mem_icon.png" Link="mem_icon.png" />
+    <Resource Include="..\..\assets\battery_icon.png" Link="battery_icon.png" />
   </ItemGroup>
 
 </Project>
