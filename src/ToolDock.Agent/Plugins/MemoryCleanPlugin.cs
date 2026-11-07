@@ -82,8 +82,9 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
         bool skip_uac_before = _skipUac;
         _mask = mask;
         _autoClean = autoClean;
-        _threshold = threshold;
-        _intervalMinutes = intervalMinutes;
+        // 范围钳制：非法值（0 或越界）一律回落到安全默认，避免界面出现「全 0」状态
+        _threshold = threshold is >= 50 and <= 99 ? threshold : 90u;
+        _intervalMinutes = intervalMinutes is >= 5 and <= 720 ? intervalMinutes : 30u;
         _skipUac = skipUac;
         _allowStandbyAuto = allowFreezes;
         _confirmClean = confirmClean;

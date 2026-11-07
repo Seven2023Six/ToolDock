@@ -38,80 +38,28 @@
 
         <!-- 工具图标网格 -->
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-            <WrapPanel Margin="24,16,24,24" Orientation="Horizontal" ItemHeight="120" ItemWidth="112">
+            <WrapPanel Margin="20,12,20,24" Orientation="Horizontal">
                 <!-- 内存清理 -->
-                <Border
-                    Margin="4"
-                    Padding="8"
-                    Cursor="Hand"
-                    CornerRadius="8"
-                    Background="Transparent"
-                    BorderBrush="Transparent"
-                    BorderThickness="1"
-                    MouseLeftButtonUp="ToolCard_Click"
-                    Tag="memclean">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="{DynamicResource Nav.Hover}" />
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
+                <Button
+                    AutomationProperties.Name="打开内存清理"
+                    Click="MemClean_Click"
+                    Style="{StaticResource ToolCardButtonStyle}">
                     <StackPanel HorizontalAlignment="Center">
-                        <Image
-                            Width="40"
-                            Height="40"
-                            Margin="0,8,0,0"
-                            HorizontalAlignment="Center"
-                            Source="pack://application:,,,/mem_icon.png" />
-                        <TextBlock
-                            Margin="0,10,0,8"
-                            HorizontalAlignment="Center"
-                            FontSize="13"
-                            Text="内存清理"
-                            TextAlignment="Center"
-                            TextWrapping="Wrap" />
+                        <Image Width="40" Height="40" HorizontalAlignment="Center" Source="pack://application:,,,/mem_icon.png" />
+                        <TextBlock Margin="0,10,0,0" HorizontalAlignment="Center" FontSize="13" Text="内存清理" TextAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
-                </Border>
+                </Button>
 
                 <!-- 外设电量显示 -->
-                <Border
-                    Margin="4"
-                    Padding="8"
-                    Cursor="Hand"
-                    CornerRadius="8"
-                    Background="Transparent"
-                    BorderBrush="Transparent"
-                    BorderThickness="1"
-                    MouseLeftButtonUp="ToolCard_Click"
-                    Tag="battery">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="{DynamicResource Nav.Hover}" />
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
+                <Button
+                    AutomationProperties.Name="打开外设电量显示"
+                    Click="Battery_Click"
+                    Style="{StaticResource ToolCardButtonStyle}">
                     <StackPanel HorizontalAlignment="Center">
-                        <Image
-                            Width="40"
-                            Height="40"
-                            Margin="0,8,0,0"
-                            HorizontalAlignment="Center"
-                            Source="pack://application:,,,/battery_icon.png" />
-                        <TextBlock
-                            Margin="0,10,0,8"
-                            HorizontalAlignment="Center"
-                            FontSize="13"
-                            Text="外设电量显示"
-                            TextAlignment="Center"
-                            TextWrapping="Wrap" />
+                        <Image Width="40" Height="40" HorizontalAlignment="Center" Source="pack://application:,,,/battery_icon.png" />
+                        <TextBlock Margin="0,10,0,0" HorizontalAlignment="Center" FontSize="13" Text="外设电量显示" TextAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
-                </Border>
+                </Button>
             </WrapPanel>
         </ScrollViewer>
     </Grid>

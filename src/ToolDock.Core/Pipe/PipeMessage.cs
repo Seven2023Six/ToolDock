@@ -20,17 +20,17 @@ public sealed class PipeMessage
     /// <summary>开机自启开关状态（welcome / settings / setAutoStart）。</summary>
     public bool AutoStart { get; set; }
 
-    /// <summary>清理区域掩码（welcome / settings / setCleanCfg）。</summary>
-    public ulong Mask { get; set; }
+    /// <summary>清理区域掩码（welcome / settings / setCleanCfg）。默认 0xE7 = Mem Reduct 默认区域，避免缺字段时显示全空。</summary>
+    public ulong Mask { get; set; } = 0xE7;
 
     /// <summary>自动清理开关（welcome / settings / setCleanCfg）。</summary>
     public bool AutoClean { get; set; }
 
     /// <summary>自动清理阈值 %（welcome / settings / setCleanCfg）。</summary>
-    public uint Threshold { get; set; }
+    public uint Threshold { get; set; } = 90;
 
     /// <summary>定时清理间隔分钟（welcome / settings / setCleanCfg）。</summary>
-    public uint IntervalM { get; set; }
+    public uint IntervalM { get; set; } = 30;
 
     /// <summary>免 UAC 计划任务开关（welcome / settings / setCleanCfg）。</summary>
     public bool SkipUac { get; set; }
@@ -39,7 +39,7 @@ public sealed class PipeMessage
     public bool AllowFreezes { get; set; }
 
     /// <summary>手动清理前弹出确认（welcome / setCleanCfg）。对齐 Mem Reduct IsShowReductConfirmation，默认 true。</summary>
-    public bool ConfirmClean { get; set; }
+    public bool ConfirmClean { get; set; } = true;
 
     /// <summary>cleanNow：发起方是否已确认。true 跳过 Agent 端确认框（App 已确认）。</summary>
     public bool Confirmed { get; set; }

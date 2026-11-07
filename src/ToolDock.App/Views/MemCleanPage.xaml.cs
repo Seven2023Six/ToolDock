@@ -73,6 +73,23 @@ public partial class MemCleanPage : UserControl
             confirm_clean = settings.AutoCleanConfirm;
         }
 
+        // 规范化：避免历史/异常数据（阈值 0、间隔 0、掩码 0）在界面上呈现为「全空」
+        bool unset = mask == 0 && !auto_clean && threshold == 0 && interval == 0 && !skip_uac;
+        if (unset)
+        {
+            mask = CleanupCore.MaskDefault;
+            threshold = 90;
+            interval = 30;
+        }
+        if (threshold is < 50 or > 99)
+        {
+            threshold = 90;
+        }
+        if (interval is < 5 or > 720)
+        {
+            interval = 30;
+        }
+
         SetRegionCheckboxes(mask);
         ThresholdToggle.IsChecked = auto_clean;
         IntervalToggle.IsChecked = auto_clean;
@@ -131,6 +148,16 @@ public partial class MemCleanPage : UserControl
         uint interval = ReadInterval();
         bool allow_freezes = AllowFreezesToggle.IsChecked == true;
         bool confirm_clean = ConfirmCleanToggle.IsChecked == true;
+
+        // 输入越界时把规范化值写回输入框（避免界面停留在 "0" 这类无效值）
+        if (ThresholdBox.Text != threshold.ToString())
+        {
+            ThresholdBox.Text = threshold.ToString();
+        }
+        if (IntervalBox.Text != interval.ToString())
+        {
+            IntervalBox.Text = interval.ToString();
+        }
 
         if (AgentLink.Instance.Connected)
         {
