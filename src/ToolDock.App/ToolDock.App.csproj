@@ -21,6 +21,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- 任务栏贴片用 GDI+ 画 ARGB 位图（原生分层窗口，不走 XAML） -->
+    <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\ToolDock.Core\ToolDock.Core.csproj" />
     <!-- VigilWatt 数据层（MIT）：BLE GATT + 经典蓝牙 + 2.4G HID 多品牌插件，复用以求功能对等 -->
     <ProjectReference Include="..\..\Tools\vigil-watt\src\VigilWatt.Core\VigilWatt.Core.csproj" />

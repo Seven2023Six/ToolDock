@@ -43,6 +43,16 @@ public partial class App : Application
             BackdropService.Initialize(backdrop);
             StartupLog($"app: 主题 {theme} / 材质 {backdrop} 就绪");
 
+            // 电量监听与任务栏贴片随界面进程启动（App 关窗即退，不常驻）；失败不影响主界面
+            try
+            {
+                Services.BatteryMonitor.Instance.Start();
+            }
+            catch (Exception exception)
+            {
+                StartupLog("app: 电量监听启动失败 " + exception.Message);
+            }
+
             var mainWindow = new MainWindow();
             StartupLog("app: 主窗构造完成");
             MainWindow = mainWindow;

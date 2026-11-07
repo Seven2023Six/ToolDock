@@ -39,6 +39,15 @@ public partial class BatterySettingsView : UserControl
         SystemBatteryToggle.IsChecked = settings.MonitorSystemBattery;
         RemainingTimeToggle.IsChecked = settings.RemainingTimeEstimateEnabled;
 
+        PillToggle.IsChecked = settings.TaskbarBatteryEnabled;
+        PillModeBox.SelectedIndex = TaskbarBatteryMode.Normalize(settings.TaskbarBatteryMode) == TaskbarBatteryMode.Lowest ? 1 : 0;
+        PillMaxBox.Items.Clear();
+        foreach (var choice in TaskbarBatteryOptions.Choices)
+        {
+            PillMaxBox.Items.Add(choice);
+        }
+        PillMaxBox.SelectedItem = TaskbarBatteryOptions.Clamp(settings.TaskbarBatteryMaxDevices);
+
         _plugins.Clear();
         foreach (var plugin in BatteryMonitor.Instance.Plugins)
         {
@@ -70,6 +79,11 @@ public partial class BatterySettingsView : UserControl
         settings.HistoryRetentionDays = ParseInt(RetentionBox.Text, 1, 3650, 90);
         settings.MonitorSystemBattery = SystemBatteryToggle.IsChecked == true;
         settings.RemainingTimeEstimateEnabled = RemainingTimeToggle.IsChecked == true;
+        settings.TaskbarBatteryEnabled = PillToggle.IsChecked == true;
+        settings.TaskbarBatteryMode = PillModeBox.SelectedIndex == 1 ? TaskbarBatteryMode.Lowest : TaskbarBatteryMode.All;
+        settings.TaskbarBatteryMaxDevices = PillMaxBox.SelectedItem is int max
+            ? TaskbarBatteryOptions.Clamp(max)
+            : TaskbarBatteryOptions.Default;
 
         foreach (var row in _plugins)
         {

@@ -60,6 +60,7 @@ public sealed class BatteryMonitor : IDisposable
                 _manager = new DeviceManager(settings, _history);
                 _manager.Start();
                 _ = _manager.RequestPollAsync();
+                Pill.Start();
                 _lastError = "";
             }
             catch (Exception exception)
@@ -85,6 +86,15 @@ public sealed class BatteryMonitor : IDisposable
         }
     }
 
+    /// <summary>底层 DeviceManager（贴片等消费方直接读设备/剩余时间）。</summary>
+    public DeviceManager? Manager
+    {
+        get { lock (_gate) { return _manager; } }
+    }
+
+    /// <summary>任务栏贴片（启用时才有实例）。</summary>
+    public TaskbarPillService Pill { get; } = new();
+
     /// <summary>底层设置对象（设置页读写低电量阈值/采样间隔/插件开关等）。</summary>
     public AppSettings? Settings
     {
@@ -103,6 +113,7 @@ public sealed class BatteryMonitor : IDisposable
         DeviceManager? manager;
         lock (_gate) { manager = _manager; }
         manager?.ApplySettings();
+        Pill.Refresh();
     }
 
     /// <summary>把设置写回磁盘（%APPDATA%\ToolDockattery-settings.json）。</summary>
@@ -239,6 +250,7 @@ public sealed class BatteryMonitor : IDisposable
 
     public void Dispose()
     {
+        try { Pill.Stop(); } catch { }
         lock (_gate)
         {
             try { _manager?.Dispose(); } catch { }
