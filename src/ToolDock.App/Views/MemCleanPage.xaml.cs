@@ -7,8 +7,7 @@ using ToolDock.Core;
 namespace ToolDock.App.Views;
 
 /// <summary>
-/// 内存清理页：Gallery 卡片风格。单条整体内存实时刷新，区域勾选 / 自动清理策略为真功能，
-/// 与设置页共享同一份管道配置（setCleanCfg）。
+/// 内存清理页：单条整体内存（实时刷新），区域勾选 / 自动清理 / 立即清理均为真功能。
 /// </summary>
 public partial class MemCleanPage : UserControl
 {
@@ -30,13 +29,14 @@ public partial class MemCleanPage : UserControl
     private void RefreshMemory()
     {
         if (SystemMemory.Read() is not { } memory)
-        {
             return;
-        }
 
         SummaryText.Text = $"物理内存 {memory.TotalGiB:0.0} GB · 实时刷新";
-        UsageBar.Value = memory.LoadPercent;
-        MemFootnoteText.Text = $"已用 {memory.UsedGiB:0.0} / {memory.TotalGiB:0.0} GB（{memory.LoadPercent}%）";
+        UsageText.Text = memory.LoadPercent.ToString();
+        // 两列都用星号：比例 = percent : (100 - percent)，进度条才正确
+        UsedColumn.Width = new System.Windows.GridLength(memory.LoadPercent, System.Windows.GridUnitType.Star);
+        FreeColumn.Width = new System.Windows.GridLength(100 - memory.LoadPercent, System.Windows.GridUnitType.Star);
+        MemFootnoteText.Text = $"已用 {memory.UsedGiB:0.0} / {memory.TotalGiB:0.0} GB";
     }
 
     private void LoadState()
@@ -44,19 +44,22 @@ public partial class MemCleanPage : UserControl
         _syncing = true;
 
         ulong mask;
-        bool auto_clean, allow_freezes, confirm_clean, skip_uac;
-        uint threshold, interval;
+        bool auto_clean;
+        uint threshold;
+        uint interval;
+        bool skip_uac;
+        bool allow_freezes;
+        bool confirm_clean;
 
         if (AgentLink.Instance.Connected)
         {
-            var link = AgentLink.Instance;
-            mask = link.CurrentMask;
-            auto_clean = link.CurrentAutoClean;
-            threshold = link.CurrentThreshold;
-            interval = link.CurrentIntervalM;
-            skip_uac = link.CurrentSkipUac;
-            allow_freezes = link.CurrentAllowFreezes;
-            confirm_clean = link.CurrentConfirmClean;
+            mask = AgentLink.Instance.CurrentMask;
+            auto_clean = AgentLink.Instance.CurrentAutoClean;
+            threshold = AgentLink.Instance.CurrentThreshold;
+            interval = AgentLink.Instance.CurrentIntervalM;
+            skip_uac = AgentLink.Instance.CurrentSkipUac;
+            allow_freezes = AgentLink.Instance.CurrentAllowFreezes;
+            confirm_clean = AgentLink.Instance.CurrentConfirmClean;
         }
         else
         {
@@ -120,9 +123,7 @@ public partial class MemCleanPage : UserControl
     private void SendConfig()
     {
         if (_syncing)
-        {
             return;
-        }
 
         ulong mask = ReadMask();
         bool auto_clean = ReadAutoCleanEnabled();
@@ -150,14 +151,10 @@ public partial class MemCleanPage : UserControl
 
     private void Region_Changed(object sender, RoutedEventArgs e) => SendConfig();
 
-    private void Policy_Changed(object sender, RoutedEventArgs e) => SendConfig();
-
     private void AutoClean_Changed(object sender, RoutedEventArgs e)
     {
         if (_syncing)
-        {
             return;
-        }
 
         if (sender == ThresholdToggle && ThresholdToggle.IsChecked == true && IntervalToggle.IsChecked != true)
         {
@@ -171,9 +168,7 @@ public partial class MemCleanPage : UserControl
     private void SkipUac_Click(object sender, RoutedEventArgs e)
     {
         if (_syncing)
-        {
             return;
-        }
 
         bool enabled = SkipUacToggle.IsChecked == true;
         if (AgentLink.Instance.Connected)
@@ -188,7 +183,17 @@ public partial class MemCleanPage : UserControl
         }
     }
 
-    /// <summary>清理前确认框正文：列出所选区域。</summary>
+    private void AllowFreezes_Click(object sender, RoutedEventArgs e)
+    {
+        SendConfig();
+    }
+
+    private void ConfirmClean_Click(object sender, RoutedEventArgs e)
+    {
+        SendConfig();
+    }
+
+    /// <summary>清理前确认框正文：列出所选区域（对齐 Mem Reduct SOURCE_MANUAL 清单文案）。</summary>
     private string BuildConfirmText()
     {
         var lines = new List<string>();

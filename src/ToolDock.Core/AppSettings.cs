@@ -11,11 +11,11 @@ public sealed class AppSettings
 {
     public bool AutoStart { get; set; }
 
-    /// <summary>界面主题：Light / Dark / System（跟随系统，WPF Fluent ThemeMode）。</summary>
+    /// <summary>界面主题：Light（默认）/ Dark。</summary>
     public string Theme { get; set; } = "Light";
 
-    /// <summary>托盘气泡通知开关。</summary>
-    public bool NotifyEnabled { get; set; } = true;
+    /// <summary>窗口材质：Mica / Acrylic / Solid。M0 先固定 Mica，设置页 M3 接线。</summary>
+    public string Backdrop { get; set; } = "Mica";
 
     /// <summary>内存清理：区域掩码（默认与 Mem Reduct REDUCT_MASK_DEFAULT 一致：0xE7）。</summary>
     public ulong AutoCleanMask { get; set; } = 0xE7;

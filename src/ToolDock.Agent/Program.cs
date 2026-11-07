@@ -33,7 +33,6 @@ internal static class Program
 
         // settings.json 的唯一写者是 Agent
         var settings = AppSettings.Load();
-        AgentRuntimeState.NotificationsEnabled = settings.NotifyEnabled;
 
         // 开机自启注册表与设置对齐（用户手动删了启动项也会在下一次启动时补回）
         if (Environment.ProcessPath is { } exePath)

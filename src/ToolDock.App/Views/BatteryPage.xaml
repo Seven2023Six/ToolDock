@@ -1,50 +1,42 @@
-<UserControl
-    x:Class="ToolDock.App.Views.BatteryPage"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="clr-namespace:ToolDock.App.Controls"
-    Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+<UserControl x:Class="ToolDock.App.Views.BatteryPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
+    <!-- 对齐 VigilWatt DevicesPage：标题+副标题+右上操作，内容区居中空态 -->
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <controls:PageHeader
-            Grid.Row="0"
-            Margin="0,0,0,24"
-            Title="设备电量"
-            Description="无线设备的电量监控（规划中）" />
-
-        <Border
-            Grid.Row="1"
-            Padding="32"
-            VerticalAlignment="Top"
-            HorizontalAlignment="Center"
-            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-            BorderThickness="1"
-            CornerRadius="{DynamicResource OverlayCornerRadius}">
-            <StackPanel HorizontalAlignment="Center">
-                <TextBlock
-                    HorizontalAlignment="Center"
-                    FontFamily="{StaticResource SymbolThemeFontFamily}"
-                    FontSize="48"
-                    Text="&#xE7EE;" />
-                <TextBlock
-                    Margin="0,12,0,0"
-                    HorizontalAlignment="Center"
-                    Style="{StaticResource BodyStrongTextBlockStyle}"
-                    Text="设备电量监控开发中" />
-                <TextBlock
-                    Margin="0,8,0,0"
-                    HorizontalAlignment="Center"
-                    Opacity="{DynamicResource DeemphasizedTextOpacity}"
-                    Style="{StaticResource CaptionTextBlockStyle}"
-                    TextWrapping="Wrap"
-                    Text="计划支持通过 HID 接收器读取无线鼠标 / 键盘 / 耳机的剩余电量，敬请期待。" />
+        <Grid Grid.Row="0" Margin="20,16,20,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                <TextBlock Text="设备电量" Style="{StaticResource PageTitleStyle}" />
+                <TextBlock Text="电量插件未接入 · 里程碑 M1 接入后显示设备" Style="{StaticResource PageSubtitleStyle}" Margin="0,2,0,0" />
             </StackPanel>
-        </Border>
+            <Button Grid.Column="1" Style="{StaticResource AppButtonStyle}" IsEnabled="False"
+                    VerticalAlignment="Top" ToolTip="等待电量插件接入（里程碑 M1）">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE72C;" Style="{StaticResource GlyphTextBlockStyle}" FontSize="14"
+                               VerticalAlignment="Center" />
+                    <TextBlock Text="刷新" Margin="8,0,0,0" />
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <!-- 空态：VigilWatt EmptyState 同款（图标 40 + 主文案 15 + 提示 12） -->
+        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock Text="&#xE702;" Style="{StaticResource GlyphTextBlockStyle}" FontSize="40"
+                       HorizontalAlignment="Center" Foreground="{DynamicResource Text.Tertiary}" />
+            <TextBlock Text="未发现设备" FontSize="15" HorizontalAlignment="Center"
+                       Margin="0,8,0,0" Foreground="{DynamicResource Text.Secondary}" />
+            <TextBlock Text="电量插件接入后，这里会显示 2.4G / 蓝牙外设的电量与低电量提醒"
+                       FontSize="12" HorizontalAlignment="Center" Margin="0,4,0,0"
+                       Foreground="{DynamicResource Text.Tertiary}" />
+        </StackPanel>
     </Grid>
 </UserControl>

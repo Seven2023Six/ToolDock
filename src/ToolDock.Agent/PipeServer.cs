@@ -100,6 +100,7 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Memo
                     {
                         T = "welcome",
                         Theme = settings.Theme,
+                        Backdrop = settings.Backdrop,
                         AutoStart = settings.AutoStart,
                     };
                     if (memclean is not null)
@@ -138,6 +139,7 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Memo
                         {
                             T = "settings",
                             Theme = settings.Theme,
+                            Backdrop = settings.Backdrop,
                             AutoStart = settings.AutoStart,
                         };
                         if (memclean is not null)
@@ -155,18 +157,20 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Memo
                         break;
                     }
                     case "setTheme":
-                        if (message.Theme is "Light" or "Dark" or "System")
+                        if (message.Theme is "Light" or "Dark")
                         {
                             settings.Theme = message.Theme;
                             settings.Save();
                             LogFile.Write($"[pipe] 主题已切换并保存：{settings.Theme}");
                         }
                         break;
-                    case "setNotify":
-                        settings.NotifyEnabled = message.Enable;
-                        settings.Save();
-                        AgentRuntimeState.NotificationsEnabled = message.Enable;
-                        LogFile.Write($"[pipe] 气泡通知已更新：{message.Enable}");
+                    case "setBackdrop":
+                        if (message.Backdrop is "Mica" or "Acrylic" or "Solid")
+                        {
+                            settings.Backdrop = message.Backdrop;
+                            settings.Save();
+                            LogFile.Write($"[pipe] 窗口材质已切换并保存：{settings.Backdrop}");
+                        }
                         break;
                     case "setCleanCfg":
                         memclean?.ApplyConfig(message.Mask, message.AutoClean, message.Threshold, message.IntervalM, message.SkipUac, message.AllowFreezes, message.ConfirmClean);
