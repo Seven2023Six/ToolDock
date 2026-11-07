@@ -282,8 +282,8 @@ internal sealed class MemoryPillWindow : IDisposable
         float gap = (float)(IconTextGapDip * scale);
         float fontPx = (float)(PercentFontSizeDip * scale);
 
-        // 字号与电量贴片一致（13dip），但保持常规字重（用户要求不粗体）
-        using var font = new Gdi.Font("Microsoft YaHei UI", fontPx, Gdi.FontStyle.Regular, Gdi.GraphicsUnit.Pixel);
+        // 字号与电量贴片一致（13dip），同样加粗
+        using var font = new Gdi.Font("Microsoft YaHei UI", fontPx, Gdi.FontStyle.Bold, Gdi.GraphicsUnit.Pixel);
         // 测量与绘制用同一个 StringFormat，否则量出来比画出来窄，最右的 "%" 会被窗口裁掉
         using var sf = (Gdi.StringFormat)Gdi.StringFormat.GenericTypographic.Clone();
         sf.FormatFlags |= Gdi.StringFormatFlags.NoWrap | Gdi.StringFormatFlags.MeasureTrailingSpaces;
