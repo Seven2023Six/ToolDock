@@ -14,7 +14,7 @@ public partial class HomePage : UserControl
         InitializeComponent();
         _timer = new DispatcherTimer(DispatcherPriority.Background)
         {
-            Interval = TimeSpan.FromSeconds(1),
+            Interval = TimeSpan.FromSeconds(2),
         };
         _timer.Tick += (_, _) => Refresh();
         Loaded += (_, _) => { Refresh(); _timer.Start(); };
@@ -23,10 +23,6 @@ public partial class HomePage : UserControl
 
     private void Refresh()
     {
-        var now = DateTime.Now;
-        ClockText.Text = now.ToString("HH:mm");
-        DateText.Text = $"{now.Month}月{now.Day}日 {ToChineseWeekDay(now.DayOfWeek)}";
-
         if (SystemMemory.Read() is not { } memory)
         {
             return;
@@ -60,14 +56,4 @@ public partial class HomePage : UserControl
         }
     }
 
-    private static string ToChineseWeekDay(DayOfWeek day) => day switch
-    {
-        DayOfWeek.Monday => "星期一",
-        DayOfWeek.Tuesday => "星期二",
-        DayOfWeek.Wednesday => "星期三",
-        DayOfWeek.Thursday => "星期四",
-        DayOfWeek.Friday => "星期五",
-        DayOfWeek.Saturday => "星期六",
-        _ => "星期日",
-    };
 }
