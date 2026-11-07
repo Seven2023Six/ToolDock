@@ -12,6 +12,17 @@ internal sealed class UiSettings
     /// <summary>任务栏内存贴片开关。</summary>
     public bool MemoryPillEnabled { get; set; } = true;
 
+    /// <summary>内置工具逐个开关（键 = 工具页 key；缺省视为开启）。</summary>
+    public Dictionary<string, bool> ToolEnabled { get; set; } = new();
+
+    public bool IsToolEnabled(string key) => !ToolEnabled.TryGetValue(key, out var on) || on;
+
+    public void SetToolEnabled(string key, bool enabled)
+    {
+        ToolEnabled[key] = enabled;
+        Save();
+    }
+
     private static string FilePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ToolDock", "ui-settings.json");
 

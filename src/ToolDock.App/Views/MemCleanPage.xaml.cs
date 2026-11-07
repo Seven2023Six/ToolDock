@@ -29,6 +29,7 @@ public partial class MemCleanPage : UserControl
             _timer.Start();
             _syncing = true;
             MemoryPillToggle.IsChecked = Services.MemoryPillService.Instance.IsEnabled;
+            ToolEnabledToggle.IsChecked = Services.UiSettings.Load().IsToolEnabled("memclean");
             _syncing = false;
         };
         Unloaded += (_, _) => _timer.Stop();
@@ -185,6 +186,15 @@ public partial class MemCleanPage : UserControl
     }
 
     private void Region_Changed(object sender, RoutedEventArgs e) => SendConfig();
+
+    private void ToolEnabled_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_syncing)
+        {
+            return;
+        }
+        Services.UiSettings.Load().SetToolEnabled("memclean", ToolEnabledToggle.IsChecked == true);
+    }
 
     private void MemoryPill_Changed(object sender, RoutedEventArgs e)
     {

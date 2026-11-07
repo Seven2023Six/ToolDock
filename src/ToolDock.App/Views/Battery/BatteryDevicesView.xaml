@@ -86,6 +86,7 @@
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="15"
                                                    FontWeight="SemiBold" Text="{Binding Name}"
@@ -99,6 +100,15 @@
                                         <TextBlock Grid.Column="2" Margin="6,0,0,0" VerticalAlignment="Center"
                                                    FontSize="13" Foreground="{Binding ProgressBrush}" Text="⚡"
                                                    Visibility="{Binding ChargingVisibility}" />
+                                        <Button Grid.Column="3" Margin="8,0,0,0" Padding="6,2"
+                                                VerticalAlignment="Center" Cursor="Hand"
+                                                AutomationProperties.Name="设置设备外观"
+                                                ToolTip="设置设备名称与图标"
+                                                Style="{StaticResource AppButtonStyle}"
+                                                FontSize="11"
+                                                Tag="{Binding DeviceId}" Click="AppearanceButton_Click">
+                                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="12" Text="&#xE70F;" />
+                                        </Button>
                                     </Grid>
                                     <ProgressBar Margin="0,8,0,0" Background="{DynamicResource Nav.Checked}"
                                                  Foreground="{Binding ProgressBrush}"

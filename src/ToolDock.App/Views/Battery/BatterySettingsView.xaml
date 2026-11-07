@@ -14,6 +14,24 @@
         <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="20,4,20,16">
 
+                <TextBlock Text="工具" Style="{StaticResource SectionTitleStyle}" Margin="2,8,0,8" />
+                <Border Style="{StaticResource SettingsCardStyle}" Margin="0,0,0,16">
+                    <Grid Margin="0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock Text="启用外设电量显示工具" Style="{StaticResource RowTitleStyle}" />
+                            <TextBlock Text="停用后「内置工具」里该卡片显示为已停用" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
+                        </StackPanel>
+                        <CheckBox x:Name="ToolEnabledToggle" Grid.Column="1" VerticalAlignment="Center"
+                                  AutomationProperties.Name="启用外设电量显示工具"
+                                  Style="{StaticResource WinUICheckBoxStyle}"
+                                  Checked="ToolEnabled_Changed" Unchecked="ToolEnabled_Changed" />
+                    </Grid>
+                </Border>
+
                 <TextBlock Text="提醒与采样" Style="{StaticResource SectionTitleStyle}" Margin="2,8,0,8" />
                 <Border Style="{StaticResource SettingsCardStyle}">
                     <StackPanel>

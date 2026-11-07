@@ -43,6 +43,7 @@ public partial class BatterySettingsView : UserControl
 
         PillToggle.IsChecked = settings.TaskbarBatteryEnabled;
         LogLevelBox.SelectedIndex = ParseLogLevel(settings.LogLevel);
+        ToolEnabledToggle.IsChecked = Services.UiSettings.Load().IsToolEnabled("battery");
         PillModeBox.SelectedIndex = TaskbarBatteryMode.Normalize(settings.TaskbarBatteryMode) == TaskbarBatteryMode.Lowest ? 1 : 0;
         PillMaxBox.Items.Clear();
         foreach (var choice in TaskbarBatteryOptions.Choices)
@@ -88,6 +89,15 @@ public partial class BatterySettingsView : UserControl
                 ? "选择要启用的品牌"
                 : $"选择要启用的品牌（已启用 {enabled.Count} / {_plugins.Count}）";
         }
+    }
+
+    private void ToolEnabled_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_loaded)
+        {
+            return;
+        }
+        Services.UiSettings.Load().SetToolEnabled("battery", ToolEnabledToggle.IsChecked == true);
     }
 
     private void SelectAllPlugins_Click(object sender, RoutedEventArgs e)

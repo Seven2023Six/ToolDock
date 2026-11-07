@@ -110,13 +110,26 @@ public partial class BatteryDevicesView : UserControl
         }
     }
 
+    /// <summary>设备卡右侧的「外观」按钮（右键菜单之外的显式入口）。</summary>
+    private void AppearanceButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string deviceId })
+        {
+            OpenAppearance(deviceId);
+        }
+    }
+
     /// <summary>设备外观：重命名 + 自定义图标（移植 VigilWatt 同名对话框）。</summary>
     private void Appearance_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not MenuItem { CommandParameter: string deviceId })
+        if (sender is MenuItem { CommandParameter: string deviceId })
         {
-            return;
+            OpenAppearance(deviceId);
         }
+    }
+
+    private void OpenAppearance(string deviceId)
+    {
         var monitor = BatteryMonitor.Instance;
         var settings = monitor.Settings;
         if (settings is null)

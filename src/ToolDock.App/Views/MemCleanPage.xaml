@@ -36,6 +36,23 @@
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" FocusVisualStyle="{x:Null}">
             <StackPanel Margin="20,16,20,16">
 
+                <!-- 工具开关（决定是否出现在「内置工具」里可用） -->
+                <Border Style="{StaticResource SettingsCardStyle}" Margin="0,0,0,12">
+                    <Grid Margin="0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock Text="启用内存清理工具" Style="{StaticResource RowTitleStyle}" />
+                            <TextBlock Text="停用后「内置工具」里该卡片显示为已停用" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
+                        </StackPanel>
+                        <ToggleButton x:Name="ToolEnabledToggle" Grid.Column="1" Style="{StaticResource SwitchStyle}"
+                                      Checked="ToolEnabled_Changed" Unchecked="ToolEnabled_Changed"
+                                      VerticalAlignment="Center" />
+                    </Grid>
+                </Border>
+
                 <!-- 单条整体内存 -->
                 <Border Style="{StaticResource CardStyle}" Padding="16,14">
                     <StackPanel>

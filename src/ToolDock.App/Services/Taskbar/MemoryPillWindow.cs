@@ -225,7 +225,7 @@ internal sealed class MemoryPillWindow : IDisposable
     private (int X, int Y) ComputePosition(PixelRect taskbar, double scale)
     {
         int gap = (int)Math.Round(EdgeGapDip * scale);
-        int separation = (int)Math.Round(SeparationDip * scale);
+        int separation = 0;   // 与电量贴片紧贴，分隔交给竖线（视觉上是一条连续胶囊）
 
         if (TaskbarLayout.IsHorizontal(taskbar))
         {
@@ -269,10 +269,9 @@ internal sealed class MemoryPillWindow : IDisposable
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
             g.Clear(Gdi.Color.Transparent);
 
+            // 与电量贴片同款：无底色、无边框，只有前景色（图标 / 文字 / 分隔竖线）
             bool light = MemoryPillService.IsLightTheme();
-            var bg = light ? Gdi.Color.FromArgb(255, 243, 243, 243) : Gdi.Color.FromArgb(255, 43, 43, 43);
-            var border = light ? Gdi.Color.FromArgb(40, 0, 0, 0) : Gdi.Color.FromArgb(60, 255, 255, 255);
-            var text = light ? Gdi.Color.FromArgb(255, 20, 20, 20) : Gdi.Color.FromArgb(255, 245, 245, 245);
+            var skin = TaskbarPillRenderer.SkinFor(light);
             var accent = percent switch
             {
                 >= 85 => Gdi.Color.FromArgb(255, 0xE2, 0x44, 0x5C),
@@ -280,42 +279,41 @@ internal sealed class MemoryPillWindow : IDisposable
                 _ => Gdi.Color.FromArgb(255, 0x34, 0xC7, 0x59),
             };
 
-            using (var path = RoundedRect(new Gdi.RectangleF(0.5f, 0.5f, _pillW - 1, _pillH - 1), _pillH / 2f))
-            using (var fill = new Gdi.SolidBrush(bg))
-            using (var pen = new Gdi.Pen(border, 1f))
-            {
-                g.FillPath(fill, path);
-                g.DrawPath(pen, path);
-            }
-
-            // 内存条图标：圆角方块 + 三条横线
-            float iconSize = _pillH * 0.42f;
-            var iconRect = new Gdi.RectangleF(_pillH * 0.30f, (_pillH - iconSize) / 2f, iconSize, iconSize);
+            // 内存条图标：圆角方块 + 两条横线
+            float iconSize = _pillH * 0.44f;
+            var iconRect = new Gdi.RectangleF(_pillH * 0.22f, (_pillH - iconSize) / 2f, iconSize, iconSize);
             using (var iconPath = RoundedRect(iconRect, 2f * (float)scale))
-            using (var iconPen = new Gdi.Pen(accent, 1.4f * (float)scale))
+            using (var iconPen = new Gdi.Pen(skin.IconStroke, 1.5f * (float)scale))
             {
                 g.DrawPath(iconPen, iconPath);
             }
-            using (var linePen = new Gdi.Pen(accent, 1.2f * (float)scale))
+            using (var linePen = new Gdi.Pen(accent, 1.4f * (float)scale))
             {
                 for (int i = 1; i <= 2; i++)
                 {
                     float ly = iconRect.Top + iconRect.Height * i / 3f;
-                    g.DrawLine(linePen, iconRect.Left + iconSize * 0.2f, ly, iconRect.Right - iconSize * 0.2f, ly);
+                    g.DrawLine(linePen, iconRect.Left + iconSize * 0.22f, ly, iconRect.Right - iconSize * 0.22f, ly);
                 }
             }
 
             string label = percent + "%";
-            using var font = new Gdi.Font("Segoe UI", (float)(_pillH * 0.42f / scale * 0.75), Gdi.FontStyle.Regular, Gdi.GraphicsUnit.Pixel);
-            using var textBrush = new Gdi.SolidBrush(text);
+            using var font = new Gdi.Font("Microsoft YaHei UI", (float)(_pillH * 0.42f), Gdi.FontStyle.Bold, Gdi.GraphicsUnit.Pixel);
+            using var textBrush = new Gdi.SolidBrush(skin.Text);
             var format = new Gdi.StringFormat
             {
                 Alignment = Gdi.StringAlignment.Near,
                 LineAlignment = Gdi.StringAlignment.Center,
             };
             g.DrawString(label, font, textBrush,
-                new Gdi.RectangleF(iconRect.Right + 4 * (float)scale, 0, _pillW - iconRect.Right - 6 * (float)scale, _pillH),
+                new Gdi.RectangleF(iconRect.Right + 4 * (float)scale, 0, _pillW - iconRect.Right - 10 * (float)scale, _pillH),
                 format);
+
+            // 右侧竖线：与电量贴片内部的格间分隔线同款（1px 宽、14dip 高、垂直居中）
+            float dividerH = (float)(14 * scale);
+            float dividerX = _pillW - Math.Max(1f, (float)scale);
+            using var dividerPen = new Gdi.Pen(skin.Divider, Math.Max(1f, (float)scale));
+            float top = (_pillH - dividerH) / 2f;
+            g.DrawLine(dividerPen, dividerX, top, dividerX, top + dividerH);
         }
         _bitmap = bmp;
     }
