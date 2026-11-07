@@ -24,6 +24,9 @@ internal sealed class MemoryPillWindow : IDisposable
     private const double EdgeGapDip = 6;      // 距任务栏右端（无电量贴片时）
     private const double SeparationDip = 10;  // 与电量贴片之间的间隔
 
+    private static readonly Gdi.Bitmap MeasureBmp = new(1, 1, GdiImaging.PixelFormat.Format32bppPArgb);
+    private static readonly Gdi.Graphics MeasureG = Gdi.Graphics.FromImage(MeasureBmp);
+
     private static MemoryPillWindow? _current;
     private static bool _classRegistered;
 
@@ -206,14 +209,15 @@ internal sealed class MemoryPillWindow : IDisposable
         bool repaint = percent != _lastPercent || _bitmap is null;
 
         _pillH = TaskbarLayout.PillHeight(taskbar, scale, TaskbarMarginDip, MinHeightDip, MaxHeightDip);
-        _pillW = (int)Math.Ceiling(84 * scale);
 
-        var (x, y) = ComputePosition(taskbar, scale);
+        // 先渲染（渲染时按文字实际宽度算出 _pillW），再定位——顺序不能反
         if (repaint)
         {
             Render(percent, scale);
             _lastPercent = percent;
         }
+
+        var (x, y) = ComputePosition(taskbar, scale);
         // 子窗口坐标相对父窗口客户区：定位数学算的是屏幕坐标，这里换算一次
         var pt = new Native.POINT { X = x, Y = y };
         Native.ScreenToClient(_taskbar, ref pt);
@@ -259,9 +263,30 @@ internal sealed class MemoryPillWindow : IDisposable
         return (xv, yv);
     }
 
+    // 与电量贴片同源尺寸（TaskbarPillRenderer 的常量）
+    private const double PadH = 6;
+    private const double IconBoxDip = 15;
+    private const double IconTextGapDip = 4;
+    private const double PercentFontSizeDip = 13;
+
     private void Render(int percent, double scale)
     {
         _bitmap?.Dispose();
+
+        float s = (float)scale;
+        float pad = (float)(PadH * scale);
+        float iconSize = (float)(IconBoxDip * scale);
+        float gap = (float)(IconTextGapDip * scale);
+        float fontPx = (float)(PercentFontSizeDip * scale);
+
+        // 字号与电量贴片一致（13dip），但保持常规字重（用户要求不粗体）
+        using var font = new Gdi.Font("Microsoft YaHei UI", fontPx, Gdi.FontStyle.Regular, Gdi.GraphicsUnit.Pixel);
+        string label = percent + "%";
+        float textW = MeasureG.MeasureString(label, font, new Gdi.PointF(0, 0), Gdi.StringFormat.GenericTypographic).Width;
+
+        // 右端给竖线留 2dip 间距
+        _pillW = (int)Math.Ceiling(pad + iconSize + gap + textW + 2 * scale + pad);
+
         var bmp = new Gdi.Bitmap(_pillW, _pillH, GdiImaging.PixelFormat.Format32bppPArgb);
         using (var g = Gdi.Graphics.FromImage(bmp))
         {
@@ -279,25 +304,28 @@ internal sealed class MemoryPillWindow : IDisposable
                 _ => Gdi.Color.FromArgb(255, 0x34, 0xC7, 0x59),
             };
 
-            // 内存条图标：圆角方块 + 两条横线
-            float iconSize = _pillH * 0.44f;
-            var iconRect = new Gdi.RectangleF(_pillH * 0.22f, (_pillH - iconSize) / 2f, iconSize, iconSize);
-            using (var iconPath = RoundedRect(iconRect, 2f * (float)scale))
-            using (var iconPen = new Gdi.Pen(skin.IconStroke, 1.5f * (float)scale))
+            // 内存条图标：与电量贴片的设备图标同样占 15dip 方框，图形居中
+            var iconBox = new Gdi.RectangleF(pad, (_pillH - iconSize) / 2f, iconSize, iconSize);
+            float innerW = iconSize * 0.86f;
+            var iconRect = new Gdi.RectangleF(
+                iconBox.X + (iconSize - innerW) / 2f,
+                iconBox.Y + (iconSize - innerW) / 2f,
+                innerW,
+                innerW);
+            using (var iconPath = RoundedRect(iconRect, 2f * s))
+            using (var iconPen = new Gdi.Pen(skin.IconStroke, 1.5f * s))
             {
                 g.DrawPath(iconPen, iconPath);
             }
-            using (var linePen = new Gdi.Pen(accent, 1.4f * (float)scale))
+            using (var linePen = new Gdi.Pen(accent, 1.4f * s))
             {
                 for (int i = 1; i <= 2; i++)
                 {
                     float ly = iconRect.Top + iconRect.Height * i / 3f;
-                    g.DrawLine(linePen, iconRect.Left + iconSize * 0.22f, ly, iconRect.Right - iconSize * 0.22f, ly);
+                    g.DrawLine(linePen, iconRect.Left + innerW * 0.2f, ly, iconRect.Right - innerW * 0.2f, ly);
                 }
             }
 
-            string label = percent + "%";
-            using var font = new Gdi.Font("Microsoft YaHei UI", (float)(_pillH * 0.42f), Gdi.FontStyle.Regular, Gdi.GraphicsUnit.Pixel);
             using var textBrush = new Gdi.SolidBrush(skin.Text);
             var format = new Gdi.StringFormat
             {
@@ -305,13 +333,13 @@ internal sealed class MemoryPillWindow : IDisposable
                 LineAlignment = Gdi.StringAlignment.Center,
             };
             g.DrawString(label, font, textBrush,
-                new Gdi.RectangleF(iconRect.Right + 4 * (float)scale, 0, _pillW - iconRect.Right - 10 * (float)scale, _pillH),
+                new Gdi.RectangleF(iconBox.Right + gap, 0, _pillW - iconBox.Right - gap, _pillH),
                 format);
 
             // 右侧竖线：与电量贴片内部的格间分隔线同款（1px 宽、14dip 高、垂直居中）
             float dividerH = (float)(14 * scale);
-            float dividerX = _pillW - Math.Max(1f, (float)scale);
-            using var dividerPen = new Gdi.Pen(skin.Divider, Math.Max(1f, (float)scale));
+            float dividerX = _pillW - Math.Max(1f, s);
+            using var dividerPen = new Gdi.Pen(skin.Divider, Math.Max(1f, s));
             float top = (_pillH - dividerH) / 2f;
             g.DrawLine(dividerPen, dividerX, top, dividerX, top + dividerH);
         }
