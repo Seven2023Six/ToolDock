@@ -194,22 +194,34 @@
                                         <ItemsControl x:Name="PluginList" Margin="0,0,4,0">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Grid Margin="0,3">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*" />
-                                                            <ColumnDefinition Width="Auto" />
-                                                        </Grid.ColumnDefinitions>
-                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                                            <TextBlock Text="{Binding Title}" FontSize="13" />
-                                                            <TextBlock Text="{Binding Subtitle}" Margin="8,0,0,0" FontSize="11"
-                                                                       Foreground="{DynamicResource Text.Tertiary}"
-                                                                       VerticalAlignment="Center" />
-                                                        </StackPanel>
-                                                        <CheckBox Grid.Column="1" VerticalAlignment="Center"
-                                                                  AutomationProperties.Name="{Binding Title}"
-                                                                  Style="{StaticResource WinUICheckBoxStyle}"
-                                                                  IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
-                                                    </Grid>
+                                                    <Border x:Name="RowBox" CornerRadius="4" Padding="6,4">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="Background" Value="Transparent" />
+                                                                <Style.Triggers>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter Property="Background" Value="{DynamicResource Nav.Hover}" />
+                                                                    </Trigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding Title}" FontSize="13" />
+                                                                <TextBlock Text="{Binding Subtitle}" Margin="8,0,0,0" FontSize="11"
+                                                                           Foreground="{DynamicResource Text.Tertiary}"
+                                                                           VerticalAlignment="Center" />
+                                                            </StackPanel>
+                                                            <CheckBox Grid.Column="1" VerticalAlignment="Center"
+                                                                      AutomationProperties.Name="{Binding Title}"
+                                                                      Style="{StaticResource WinUICheckBoxStyle}"
+                                                                      IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
+                                                        </Grid>
+                                                    </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>

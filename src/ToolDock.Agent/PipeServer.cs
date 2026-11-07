@@ -8,7 +8,7 @@ namespace ToolDock.Agent;
 /// App 是短命进程：握手（hello → welcome），随后双向收发。
 /// settings.json 的唯一写者在这里——App 的主题变更通过管道送达后落盘。
 /// </summary>
-internal sealed class PipeServer(AppSettings settings, string agentExePath, MemoryCleanPlugin? memclean = null)
+internal sealed class PipeServer(AppSettings settings, string agentExePath, TrayIconController tray, MemoryCleanPlugin? memclean = null)
 {
     private const string PipeName = "tooldock-agent";
 
@@ -199,6 +199,16 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Memo
                         break;
                     case "cleanNow":
                         memclean?.CleanNowExternal(message.Confirmed);
+                        break;
+                    case "notify":
+                        if (!string.IsNullOrWhiteSpace(message.Text))
+                        {
+                            tray.ShowBalloon(message.Title ?? "工具坞", message.Text);
+                            LogFile.Write($"[pipe] 通知：{message.Title} / {message.Text}");
+                        }
+                        break;
+                    case "batteryStatus":
+                        tray.UpdateStatusLine("battery", string.IsNullOrWhiteSpace(message.Text) ? null : message.Text);
                         break;
                     case "setAutoStart":
                         AutoStartManager.Apply(message.Enable, agentExePath);

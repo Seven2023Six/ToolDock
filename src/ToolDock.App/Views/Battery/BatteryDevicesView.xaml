@@ -58,7 +58,19 @@
             <ItemsControl x:Name="DeviceList">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border Margin="0,0,0,8" Padding="16,14" Style="{StaticResource CardStyle}">
+                        <Border Margin="0,0,0,8" Padding="16,14" Style="{StaticResource CardStyle}"
+                                ToolTip="右键可设置设备名称与图标">
+                            <Border.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="设备外观…" Click="Appearance_Click"
+                                              CommandParameter="{Binding PlacementTarget.DataContext.DeviceId, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                    <Separator />
+                                    <MenuItem Header="忽略此设备" Click="Ignore_Click"
+                                              CommandParameter="{Binding PlacementTarget.DataContext.DeviceId, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                    <MenuItem Header="移除此设备（离线时可用）" Click="Remove_Click"
+                                              CommandParameter="{Binding PlacementTarget.DataContext.DeviceId, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                </ContextMenu>
+                            </Border.ContextMenu>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
@@ -117,8 +129,20 @@
                        Text="连接蓝牙设备或插入 2.4G 接收器，然后点击刷新" />
         </StackPanel>
 
-        <TextBlock Grid.Row="2" Margin="20,8,20,12" FontSize="11"
-                   Foreground="{DynamicResource Text.Tertiary}"
-                   Text="数据来自蓝牙电量服务与已适配的 2.4G 设备协议。" />
+        <Grid Grid.Row="2" Margin="20,8,20,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock VerticalAlignment="Center" FontSize="11"
+                       Foreground="{DynamicResource Text.Tertiary}"
+                       Text="数据来自蓝牙电量服务与已适配的 2.4G 设备协议。" />
+            <StackPanel x:Name="HiddenBar" Grid.Column="1" Orientation="Horizontal" Visibility="Collapsed">
+                <Button x:Name="IgnoredButton" Padding="8,2" FontSize="12" Content="已忽略"
+                        Style="{StaticResource AppButtonStyle}" Click="Ignored_Click" />
+                <Button x:Name="BlockedButton" Margin="6,0,0,0" Padding="8,2" FontSize="12" Content="已屏蔽"
+                        Style="{StaticResource AppButtonStyle}" Click="Blocked_Click" />
+            </StackPanel>
+        </Grid>
     </Grid>
 </UserControl>

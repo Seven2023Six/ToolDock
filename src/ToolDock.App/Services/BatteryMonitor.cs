@@ -58,6 +58,9 @@ public sealed class BatteryMonitor : IDisposable
 
                 _settings = settings;
                 _manager = new DeviceManager(settings, _history);
+                _manager.LowBatteryDetected += OnLowBattery;
+                _manager.DevicesChanged += PushBatteryStatus;
+                _manager.DeviceUpdated += _ => PushBatteryStatus();
                 _manager.Start();
                 _ = _manager.RequestPollAsync();
                 Pill.Start();
@@ -225,6 +228,59 @@ public sealed class BatteryMonitor : IDisposable
         manager?.ApplySettings();
     }
 
+    private string? _lastStatusText;
+
+    /// <summary>低电量提醒：经 Agent 弹托盘气泡（阈值由 DeviceManager 按设置判定）。</summary>
+    private void OnLowBattery(DeviceStatus device)
+    {
+        try
+        {
+            AgentLink.Instance.SendNotify("电量提醒", $"{device.DisplayName} 电量 {device.BatteryPercent}%，请及时充电");
+        }
+        catch
+        {
+            // 提醒失败不影响监测
+        }
+    }
+
+    /// <summary>把在线设备里最低的电量同步到托盘提示（文本变化才发，避免刷管道）。</summary>
+    private void PushBatteryStatus()
+    {
+        DeviceManager? manager;
+        lock (_gate) { manager = _manager; }
+        if (manager is null)
+        {
+            return;
+        }
+
+        DeviceStatus? lowest = null;
+        foreach (var device in manager.Devices)
+        {
+            if (!device.IsOnline || device.BatteryPercent is null)
+            {
+                continue;
+            }
+            if (lowest is null || device.BatteryPercent < lowest.BatteryPercent)
+            {
+                lowest = device;
+            }
+        }
+
+        string? text = lowest is null ? null : $"电量 {lowest.BatteryPercent}%（{lowest.DisplayName}）";
+        if (text == _lastStatusText)
+        {
+            return;
+        }
+        _lastStatusText = text;
+        try
+        {
+            AgentLink.Instance.SendBatteryStatus(text);
+        }
+        catch
+        {
+        }
+    }
+
     /// <summary>剩余可用时间估算（供列表细节行显示；算不出时 IsAvailable=false）。</summary>
     public RemainingTimeEstimateResult? GetRemainingTime(DeviceStatus device)
     {
@@ -251,6 +307,17 @@ public sealed class BatteryMonitor : IDisposable
     public void Dispose()
     {
         try { Pill.Stop(); } catch { }
+        try
+        {
+            if (_manager is not null)
+            {
+                _manager.LowBatteryDetected -= OnLowBattery;
+                _manager.DevicesChanged -= PushBatteryStatus;
+            }
+        }
+        catch
+        {
+        }
         lock (_gate)
         {
             try { _manager?.Dispose(); } catch { }

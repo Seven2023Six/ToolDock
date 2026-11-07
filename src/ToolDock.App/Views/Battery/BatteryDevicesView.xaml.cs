@@ -62,6 +62,16 @@ public partial class BatteryDevicesView : UserControl
         bool empty = rows.Count == 0;
         EmptyState.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
 
+        // 隐藏设备入口：有忽略/屏蔽记录时才显示
+        var managerForHidden = monitor.Manager;
+        int ignored = managerForHidden?.IgnoredDevices.Count ?? 0;
+        int blocked = managerForHidden?.BlockedDevices.Count ?? 0;
+        HiddenBar.Visibility = ignored + blocked > 0 ? Visibility.Visible : Visibility.Collapsed;
+        IgnoredButton.Visibility = ignored > 0 ? Visibility.Visible : Visibility.Collapsed;
+        BlockedButton.Visibility = blocked > 0 ? Visibility.Visible : Visibility.Collapsed;
+        IgnoredButton.Content = $"已忽略 {ignored} 台";
+        BlockedButton.Content = $"已屏蔽 {blocked} 台";
+
         if (!string.IsNullOrEmpty(monitor.LastError))
         {
             SummaryText.Text = "电量读取不可用";
@@ -100,6 +110,139 @@ public partial class BatteryDevicesView : UserControl
         }
     }
 
+    /// <summary>设备外观：重命名 + 自定义图标（移植 VigilWatt 同名对话框）。</summary>
+    private void Appearance_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { CommandParameter: string deviceId })
+        {
+            return;
+        }
+        var monitor = BatteryMonitor.Instance;
+        var settings = monitor.Settings;
+        if (settings is null)
+        {
+            return;
+        }
+        var device = monitor.Devices.FirstOrDefault(d => d.Id == deviceId);
+        if (device is null)
+        {
+            return;
+        }
+
+        var applied = DevicePresentation.Apply(device, settings);
+        var automaticKind = device.Kind == DeviceKind.Unknown
+            ? DeviceKindGuesser.Guess(device.DisplayName)
+            : device.Kind;
+        var currentKind = settings.DeviceCustomizations.TryGetValue(deviceId, out var existing) && existing.IconKind.HasValue
+            ? existing.IconKind.Value
+            : automaticKind;
+
+        var dialog = new DeviceAppearanceDialog(deviceId, applied.DisplayName, currentKind, automaticKind)
+        {
+            Owner = Window.GetWindow(this),
+        };
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        if (dialog.ResetRequested)
+        {
+            settings.DeviceCustomizations.Remove(deviceId);
+        }
+        else if (dialog.Result is { } custom)
+        {
+            settings.DeviceCustomizations[deviceId] = custom;
+        }
+
+        monitor.SaveSettings();
+        monitor.ApplySettings();
+        _signature = "";   // 强制重建行，立刻反映新名字/新图标
+        Update();
+    }
+
+    /// <summary>忽略设备：从列表隐藏，可在底部「已忽略」里恢复。</summary>
+    private void Ignore_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { CommandParameter: string deviceId })
+        {
+            return;
+        }
+        BatteryMonitor.Instance.Manager?.IgnoreDevice(deviceId);
+        BatteryMonitor.Instance.SaveSettings();
+        _signature = "";
+        Update();
+    }
+
+    /// <summary>移除离线设备（在线设备会立刻被插件重新报回，故只对离线生效）。</summary>
+    private void Remove_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { CommandParameter: string deviceId })
+        {
+            return;
+        }
+        BatteryMonitor.Instance.Manager?.RemoveOfflineDevice(deviceId, block: false);
+        BatteryMonitor.Instance.SaveSettings();
+        _signature = "";
+        Update();
+    }
+
+    private void Ignored_Click(object sender, RoutedEventArgs e)
+    {
+        var manager = BatteryMonitor.Instance.Manager;
+        if (manager is null)
+        {
+            return;
+        }
+        var menu = new ContextMenu { PlacementTarget = IgnoredButton, Placement = System.Windows.Controls.Primitives.PlacementMode.Top };
+        foreach (var (id, info) in manager.IgnoredDevices)
+        {
+            var name = string.IsNullOrEmpty(info.Name) ? id : info.Name;
+            var item = new MenuItem { Header = $"恢复「{name}」" };
+            item.Click += (_, _) =>
+            {
+                manager.UnignoreDevice(id);
+                BatteryMonitor.Instance.SaveSettings();
+                _signature = "";
+                Update();
+            };
+            menu.Items.Add(item);
+        }
+        if (menu.Items.Count == 0)
+        {
+            return;
+        }
+        menu.IsOpen = true;
+    }
+
+    private void Blocked_Click(object sender, RoutedEventArgs e)
+    {
+        var manager = BatteryMonitor.Instance.Manager;
+        if (manager is null)
+        {
+            return;
+        }
+        var menu = new ContextMenu { PlacementTarget = BlockedButton, Placement = System.Windows.Controls.Primitives.PlacementMode.Top };
+        foreach (var (id, info) in manager.BlockedDevices)
+        {
+            var name = string.IsNullOrEmpty(info.Name) ? id : info.Name;
+            var item = new MenuItem { Header = $"解除屏蔽「{name}」" };
+            item.Click += (_, _) =>
+            {
+                manager.UnblockDevice(id);
+                BatteryMonitor.Instance.SaveSettings();
+                _signature = "";
+                Update();
+            };
+            menu.Items.Add(item);
+        }
+        if (menu.Items.Count == 0)
+        {
+            return;
+        }
+        menu.IsOpen = true;
+    }
+
     private void SystemBattery_Changed(object sender, RoutedEventArgs e)
     {
         if (_syncing)
@@ -134,6 +277,8 @@ public sealed class BatteryRow
     private static readonly Color Source24G = Color.FromRgb(0xAF, 0x52, 0xDE);
     private static readonly Color SourceSystem = Color.FromRgb(0x30, 0xB0, 0xC7);
 
+    public string DeviceId { get; init; } = "";
+    public DeviceKind Kind { get; init; } = DeviceKind.Unknown;
     public string Signature { get; init; } = "";
     public string IconGlyph { get; init; } = "\uE7C3";
     public string Name { get; init; } = "";
@@ -149,8 +294,14 @@ public sealed class BatteryRow
     public Brush ProgressBrush { get; init; } = Frozen(Offline);
     public Brush PercentBrush { get; init; } = Frozen(Offline);
 
-    public static BatteryRow From(DeviceStatus device, BatteryMonitor monitor)
+    public static BatteryRow From(DeviceStatus raw, BatteryMonitor monitor)
     {
+        // 套用用户自定义（重命名 / 自定义图标）；没有设置时原样展示
+        var settings = monitor.Settings;
+        var device = settings is null
+            ? raw
+            : DevicePresentation.WithIconKind(DevicePresentation.Apply(raw, settings), settings);
+
         bool charging = DeviceStatusFormatter.IsCharging(device.Charging);
         string state = DeviceStatusFormatter.ChargeSuffix(device.Charging);
         if (!device.IsOnline)
@@ -200,6 +351,8 @@ public sealed class BatteryRow
 
         return new BatteryRow
         {
+            DeviceId = device.Id,
+            Kind = device.Kind,
             Signature = signature,
             IconGlyph = Glyph(device.Kind),
             Name = device.DisplayName,

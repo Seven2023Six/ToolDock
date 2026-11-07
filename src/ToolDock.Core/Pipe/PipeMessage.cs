@@ -44,6 +44,12 @@ public sealed class PipeMessage
     /// <summary>cleanNow：发起方是否已确认。true 跳过 Agent 端确认框（App 已确认）。</summary>
     public bool Confirmed { get; set; }
 
+    /// <summary>通知标题（notify）。</summary>
+    public string? Title { get; set; }
+
+    /// <summary>通知正文 / 托盘状态行文本（notify / batteryStatus）。</summary>
+    public string? Text { get; set; }
+
     /// <summary>开关目标状态（setAutoStart）。</summary>
     public bool Enable { get; set; }
 

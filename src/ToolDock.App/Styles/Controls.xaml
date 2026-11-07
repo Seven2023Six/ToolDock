@@ -105,6 +105,125 @@
 
     <!-- 工具卡片按钮：图吧式图标卡（无边框、悬停高亮、圆角 8），供内置/自定义工具网格使用 -->
     <!-- 子页切换胶囊（页面内二级导航） -->
+    <!-- 图标选择卡片（设备外观对话框）：选中时强调色描边 + 浅强调底 -->
+    <Style x:Key="IconChoiceStyle" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="Card" CornerRadius="6" BorderThickness="1" Padding="8,10"
+                            Background="{DynamicResource Card.Background}"
+                            BorderBrush="{DynamicResource Card.Stroke}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Card" Property="Background" Value="{DynamicResource Nav.Hover}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource Accent}" />
+                            <Setter TargetName="Card" Property="BorderThickness" Value="2" />
+                            <Setter TargetName="Card" Property="Background" Value="{DynamicResource Nav.Checked}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 下拉框（隐式样式）：与输入框同观感——32px、圆角 4、浅底描边，弹层用卡片样式 -->
+    <Style TargetType="ComboBox">
+        <Setter Property="Height" Value="32" />
+        <Setter Property="MinWidth" Value="120" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid>
+                        <Border x:Name="Box" CornerRadius="4" BorderThickness="1"
+                                Background="{DynamicResource Btn.Background}"
+                                BorderBrush="{DynamicResource Btn.Stroke}" />
+
+                        <!-- 透明按钮铺满整块：点任意位置开合 -->
+                        <ToggleButton x:Name="Toggle" Focusable="False" ClickMode="Press"
+                                      Background="Transparent" BorderThickness="0"
+                                      IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border Background="Transparent" />
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+
+                        <ContentPresenter x:Name="SelectedContent"
+                                          Margin="10,0,30,0" VerticalAlignment="Center"
+                                          IsHitTestVisible="False"
+                                          Content="{TemplateBinding SelectionBoxItem}"
+                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                          ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}" />
+
+                        <TextBlock x:Name="Chevron" Margin="0,0,10,0" HorizontalAlignment="Right"
+                                   VerticalAlignment="Center" IsHitTestVisible="False"
+                                   FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                   Foreground="{DynamicResource Text.Secondary}" Text="&#xE70D;" />
+
+                        <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen}"
+                               Placement="Bottom" AllowsTransparency="True" Focusable="False"
+                               PopupAnimation="Fade">
+                            <Border Margin="0,4,0,0" Padding="4" CornerRadius="8" BorderThickness="1"
+                                    Background="{DynamicResource Bg.Solid}"
+                                    BorderBrush="{DynamicResource Card.Stroke}"
+                                    Width="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+                                <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
+                                    <ItemsPresenter />
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Box" Property="Background" Value="{DynamicResource Btn.Background.Hover}" />
+                        </Trigger>
+                        <Trigger Property="IsDropDownOpen" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Accent}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 下拉项（隐式样式）：圆角高亮，悬停浅底、选中强调浅底 -->
+    <Style TargetType="ComboBoxItem">
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBoxItem">
+                    <Border x:Name="ItemBox" CornerRadius="4" Padding="{TemplateBinding Padding}"
+                            Background="Transparent">
+                        <ContentPresenter VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="ItemBox" Property="Background" Value="{DynamicResource Nav.Hover}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="ItemBox" Property="Background" Value="{DynamicResource Nav.Checked}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- 下拉选择按钮（多选下拉的触发按钮）：外观与输入框一致，右侧留箭头位 -->
     <Style x:Key="DropDownToggleStyle" TargetType="ToggleButton">
         <Setter Property="Cursor" Value="Hand" />

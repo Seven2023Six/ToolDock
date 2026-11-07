@@ -263,6 +263,66 @@ internal sealed class AgentLink : IDisposable
         });
     }
 
+    /// <summary>让 Agent 弹托盘气泡（低电量提醒等）。</summary>
+    public void SendNotify(string title, string text)
+    {
+        if (!Connected || _pipe is null)
+        {
+            return;
+        }
+        var pipe = _pipe;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _writeGate.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    await PipeFrame.WriteAsync(pipe, new PipeMessage { T = "notify", Title = title, Text = text }, CancellationToken.None)
+                        .ConfigureAwait(false);
+                }
+                finally
+                {
+                    _writeGate.Release();
+                }
+            }
+            catch (Exception exception) when (exception is IOException or InvalidOperationException or ObjectDisposedException)
+            {
+                Connected = false;
+            }
+        });
+    }
+
+    /// <summary>把最低电量同步到托盘提示（null 清空）。</summary>
+    public void SendBatteryStatus(string? text)
+    {
+        if (!Connected || _pipe is null)
+        {
+            return;
+        }
+        var pipe = _pipe;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _writeGate.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    await PipeFrame.WriteAsync(pipe, new PipeMessage { T = "batteryStatus", Text = text }, CancellationToken.None)
+                        .ConfigureAwait(false);
+                }
+                finally
+                {
+                    _writeGate.Release();
+                }
+            }
+            catch (Exception exception) when (exception is IOException or InvalidOperationException or ObjectDisposedException)
+            {
+                Connected = false;
+            }
+        });
+    }
+
     /// <summary>立即清理指令下发 Agent（confirmed=true 表示 App 端已弹过确认框）。</summary>
     public void SendCleanNow(bool confirmed)
     {

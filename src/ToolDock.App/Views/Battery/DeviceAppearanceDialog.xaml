@@ -1,0 +1,59 @@
+<Window
+    x:Class="ToolDock.App.Views.DeviceAppearanceDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="设备外观"
+    Width="480"
+    SizeToContent="Height"
+    ResizeMode="NoResize"
+    WindowStartupLocation="CenterOwner"
+    Background="{DynamicResource Bg.Solid}"
+    FontFamily="Segoe UI, Microsoft YaHei UI, Microsoft YaHei"
+    UseLayoutRounding="True"
+    TextOptions.TextFormattingMode="Ideal">
+
+    <!-- 设备外观：重命名 + 自定义图标（对齐 VigilWatt「设备外观」对话框的功能） -->
+    <StackPanel Margin="20,16,20,16">
+        <TextBlock Text="设备名称" Style="{StaticResource RowTitleStyle}" />
+        <TextBox x:Name="NameBox" Height="32" Margin="0,6,0,0" VerticalContentAlignment="Center"
+                 Style="{StaticResource WinUITextBoxStyle}" />
+        <TextBlock x:Name="NameHint" Margin="0,4,0,0" FontSize="11" TextWrapping="Wrap"
+                   Foreground="{DynamicResource Text.Tertiary}"
+                   Text="留空则使用设备上报的名称。" />
+
+        <TextBlock Text="图标" Style="{StaticResource RowTitleStyle}" Margin="0,16,0,0" />
+        <ItemsControl x:Name="IconList" Margin="0,8,0,0">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="4" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <RadioButton GroupName="IconKind" Margin="3" Cursor="Hand"
+                                 AutomationProperties.Name="{Binding Label}"
+                                 IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                 Style="{StaticResource IconChoiceStyle}">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock HorizontalAlignment="Center"
+                                       FontFamily="Segoe MDL2 Assets" FontSize="22"
+                                       Foreground="{DynamicResource Text.Primary}"
+                                       Text="{Binding Glyph}" />
+                            <TextBlock Margin="0,6,0,0" HorizontalAlignment="Center" FontSize="12"
+                                       Text="{Binding Label}" />
+                        </StackPanel>
+                    </RadioButton>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <StackPanel Margin="0,18,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="恢复默认" MinWidth="96" Height="32" Padding="12,0"
+                    Style="{StaticResource AppButtonStyle}" Click="Reset_Click" />
+            <Button Content="取消" MinWidth="80" Height="32" Margin="8,0,0,0" Padding="12,0"
+                    Style="{StaticResource AppButtonStyle}" Click="Cancel_Click" />
+            <Button Content="保存" MinWidth="88" Height="32" Margin="8,0,0,0" Padding="12,0"
+                    Style="{StaticResource PrimaryButtonStyle}" Click="Save_Click" />
+        </StackPanel>
+    </StackPanel>
+</Window>
