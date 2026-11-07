@@ -210,6 +210,7 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                         LogFile.Write($"[pipe] 清理配置已更新：mask=0x{message.Mask:X} 自动={message.AutoClean} 阈值={message.Threshold}% 间隔={message.IntervalM}分 免UAC={message.SkipUac} 自动含冻结区={message.AllowFreezes} 清理确认={message.ConfirmClean}");
                         break;
                     case "cleanNow":
+                        LogFile.Write($"[pipe] 收到清理请求（confirmed={message.Confirmed}）");
                         memclean?.CleanNowExternal(message.Confirmed);
                         break;
                     case "notify":

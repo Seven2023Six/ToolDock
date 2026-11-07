@@ -144,20 +144,39 @@ internal sealed class MemoryPillService
         _window = null;
     }
 
-    /// <summary>点击贴片：交给 Agent 走既有清理链路（是否弹确认/UAC 由内存清理设置决定）。</summary>
+    /// <summary>
+    /// 点击贴片：交给 Agent 走既有清理链路。贴片点击等同热键，直接清理，
+    /// 不再弹「清理前确认」；是否弹 UAC 仍由免 UAC 设置决定。
+    /// </summary>
     private static void CleanNow()
     {
         try
         {
             var link = AgentLink.Instance;
+            Diag($"点击贴片：Connected={link.Connected} 已提权={CleanupCore.IsElevated()}");
             if (link.Connected)
             {
-                link.SendCleanNow(confirmed: false);
+                link.SendCleanNow(confirmed: true);
             }
             else if (CleanupCore.IsElevated())
             {
                 CleanupCore.Clean(CleanupCore.MaskDefault);
             }
+        }
+        catch (Exception exception)
+        {
+            Diag("点击清理失败：" + exception.GetType().Name + " " + exception.Message);
+        }
+    }
+
+    private static void Diag(string line)
+    {
+        try
+        {
+            string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ToolDock", "logs");
+            Directory.CreateDirectory(dir);
+            File.AppendAllText(Path.Combine(dir, $"mempill-{DateTime.Now:yyyyMMdd}.log"),
+                $"{DateTime.Now:HH:mm:ss.fff} {line}{Environment.NewLine}");
         }
         catch
         {

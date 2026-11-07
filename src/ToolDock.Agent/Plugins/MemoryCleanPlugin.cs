@@ -261,6 +261,7 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
             // 自动清理永不确认；手动清理按设置弹确认框（Mem Reduct：SOURCE_MANUAL + IsShowReductConfirmation）
             bool is_auto = source is "阈值" or "定时";
             ulong mask = is_auto ? AutoEffectiveMask() : _mask;
+            context.Log.Info($"开始清理（{source}，confirmed={confirmed}，mask=0x{mask:X}，已提权={context.Elevation.IsElevated}，免UAC={_skipUac}）");
 
             if (!is_auto && !confirmed && _confirmClean)
             {

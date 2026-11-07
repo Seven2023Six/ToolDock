@@ -269,6 +269,9 @@ internal sealed class MemoryPillWindow : IDisposable
     private const double IconTextGapDip = 4;
     private const double PercentFontSizeDip = 13;
 
+    /// <summary>宽度余量（像素）：与电量贴片同因同解——量出来的字宽比实际绘制窄，不补就会截掉 "%"。</summary>
+    private const int SlackPx = 8;
+
     private void Render(int percent, double scale)
     {
         _bitmap?.Dispose();
@@ -281,27 +284,43 @@ internal sealed class MemoryPillWindow : IDisposable
 
         // 字号与电量贴片一致（13dip），但保持常规字重（用户要求不粗体）
         using var font = new Gdi.Font("Microsoft YaHei UI", fontPx, Gdi.FontStyle.Regular, Gdi.GraphicsUnit.Pixel);
-        string label = percent + "%";
-        float textW = MeasureG.MeasureString(label, font, new Gdi.PointF(0, 0), Gdi.StringFormat.GenericTypographic).Width;
+        // 测量与绘制用同一个 StringFormat，否则量出来比画出来窄，最右的 "%" 会被窗口裁掉
+        using var sf = (Gdi.StringFormat)Gdi.StringFormat.GenericTypographic.Clone();
+        sf.FormatFlags |= Gdi.StringFormatFlags.NoWrap | Gdi.StringFormatFlags.MeasureTrailingSpaces;
+        sf.LineAlignment = Gdi.StringAlignment.Center;
 
-        // 右端给竖线留 2dip 间距
-        _pillW = (int)Math.Ceiling(pad + iconSize + gap + textW + 2 * scale + pad);
+        string label = percent + "%";
+        float textW = MeasureG.MeasureString(label, font, new Gdi.PointF(0, 0), sf).Width;
+
+        // 右端给竖线留 2dip 间距，再加与电量贴片同等的字宽余量（SlackPx）
+        _pillW = (int)Math.Ceiling(pad + iconSize + gap + textW + 2 * scale + pad) + SlackPx;
 
         var bmp = new Gdi.Bitmap(_pillW, _pillH, GdiImaging.PixelFormat.Format32bppPArgb);
         using (var g = Gdi.Graphics.FromImage(bmp))
         {
             g.SmoothingMode = Gdi2.SmoothingMode.AntiAlias;
-            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+            // 灰度抗锯齿（与电量贴片一致）。ClearType 是按颜色通道混色，混到透明黑背景上
+            // 会让文字边缘糊出一圈黑描边，所以不能用。
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
             g.Clear(Gdi.Color.Transparent);
+
+            // 与电量贴片一致：先铺一层 alpha=1 的近透明底，整块贴片才都是命中区。
+            // 不铺的话鼠标会穿透到任务栏，点空白处（图标与数字之外）就没反应。
+            using (var hit = new Gdi.SolidBrush(Gdi.Color.FromArgb(1, 0, 0, 0)))
+            {
+                g.FillRectangle(hit, 0, 0, _pillW, _pillH);
+            }
 
             // 与电量贴片同款：无底色、无边框，只有前景色（图标 / 文字 / 分隔竖线）
             bool light = MemoryPillService.IsLightTheme();
             var skin = TaskbarPillRenderer.SkinFor(light);
-            var accent = percent switch
+
+            // 文字配色与电量贴片一致（同一套 PillPalette 状态色）；内存是占用率，越高越差
+            var state = percent switch
             {
-                >= 85 => Gdi.Color.FromArgb(255, 0xE2, 0x44, 0x5C),
-                >= 70 => Gdi.Color.FromArgb(255, 0xFA, 0xAA, 0x17),
-                _ => Gdi.Color.FromArgb(255, 0x34, 0xC7, 0x59),
+                >= 85 => PillPalette.Low,
+                >= 70 => PillPalette.Mid,
+                _ => PillPalette.Good,
             };
 
             // 内存条图标：与电量贴片的设备图标同样占 15dip 方框，图形居中
@@ -312,33 +331,19 @@ internal sealed class MemoryPillWindow : IDisposable
                 iconBox.Y + (iconSize - innerW) / 2f,
                 innerW,
                 innerW);
-            using (var iconPath = RoundedRect(iconRect, 2f * s))
-            using (var iconPen = new Gdi.Pen(skin.IconStroke, 1.5f * s))
-            {
-                g.DrawPath(iconPen, iconPath);
-            }
-            using (var linePen = new Gdi.Pen(accent, 1.4f * s))
-            {
-                for (int i = 1; i <= 2; i++)
-                {
-                    float ly = iconRect.Top + iconRect.Height * i / 3f;
-                    g.DrawLine(linePen, iconRect.Left + innerW * 0.2f, ly, iconRect.Right - innerW * 0.2f, ly);
-                }
-            }
+            DrawMemoryIcon(g, skin.IconStroke, iconRect, s);
 
-            using var textBrush = new Gdi.SolidBrush(skin.Text);
-            var format = new Gdi.StringFormat
-            {
-                Alignment = Gdi.StringAlignment.Near,
-                LineAlignment = Gdi.StringAlignment.Center,
-            };
+            using var textBrush = new Gdi.SolidBrush(state);
             g.DrawString(label, font, textBrush,
                 new Gdi.RectangleF(iconBox.Right + gap, 0, _pillW - iconBox.Right - gap, _pillH),
-                format);
+                sf);
 
-            // 右侧竖线：与电量贴片内部的格间分隔线同款（1px 宽、14dip 高、垂直居中）
+            // 右侧竖线：与电量贴片内部的格间分隔线同款（1px 宽、14dip 高、垂直居中）。
+            // 位置贴住文字（4dip），不放到位图最右——位图末尾还留着防截断的 SlackPx 余量，
+            // 画到最右会让竖线离 "%" 太远，和电量贴片那一侧不对称。
             float dividerH = (float)(14 * scale);
-            float dividerX = _pillW - Math.Max(1f, s);
+            float textEnd = iconBox.Right + gap + textW;
+            float dividerX = Math.Min(_pillW - Math.Max(1f, s), textEnd + (float)(4 * scale));
             using var dividerPen = new Gdi.Pen(skin.Divider, Math.Max(1f, s));
             float top = (_pillH - dividerH) / 2f;
             g.DrawLine(dividerPen, dividerX, top, dividerX, top + dividerH);
@@ -457,6 +462,47 @@ internal sealed class MemoryPillWindow : IDisposable
         }
         try { _timer.Stop(); } catch { }
         ReleaseWindow();
+    }
+
+    /// <summary>
+    /// 内存条字形（对齐工具坞新内存图标）：圆角长条外框 + 四根竖条 + 底部金手指。
+    /// 只用灰色描边、不填状态色——与电量贴片的设备图标一致，状态色只给百分比文字。
+    /// </summary>
+    private static void DrawMemoryIcon(Gdi.Graphics g, Gdi.Color stroke, Gdi.RectangleF box, float scale)
+    {
+        float w = box.Width;
+        float totalH = w * 0.80f;                        // 条体 + 引脚总高
+        float top = box.Y + (box.Height - totalH) / 2f;
+        float bodyH = totalH * 0.74f;
+        float pinH = totalH - bodyH - 1f * scale;
+        var body = new Gdi.RectangleF(box.X, top, w, bodyH);
+
+        using (var path = RoundedRect(body, Math.Max(1f, 1.8f * scale)))
+        using (var pen = new Gdi.Pen(stroke, Math.Max(1f, 1.3f * scale)))
+        {
+            g.DrawPath(pen, path);
+        }
+
+        using var brush = new Gdi.SolidBrush(stroke);
+
+        // 四根竖条
+        float barW = w * 0.11f;
+        float barH = bodyH * 0.42f;
+        float barFirst = body.X + w * 0.15f;
+        float barStep = w * 0.185f;
+        for (int i = 0; i < 4; i++)
+        {
+            g.FillRectangle(brush, barFirst + barStep * i, body.Y + bodyH * 0.22f, barW, barH);
+        }
+
+        // 底部金手指引脚
+        float pinW = w * 0.09f;
+        float pinFirst = body.X + w * 0.30f;
+        float pinStep = w * 0.135f;
+        for (int i = 0; i < 4; i++)
+        {
+            g.FillRectangle(brush, pinFirst + pinStep * i, body.Bottom, pinW, pinH);
+        }
     }
 
     private static Gdi2.GraphicsPath RoundedRect(Gdi.RectangleF r, float radius)
