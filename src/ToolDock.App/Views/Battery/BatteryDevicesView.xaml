@@ -31,7 +31,7 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Margin="20,0,20,0">
+        <Grid Grid.Row="0" Margin="20,4,20,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -40,7 +40,8 @@
                        Style="{StaticResource PageSubtitleStyle}" Text="正在扫描设备…" />
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <CheckBox x:Name="SystemBatteryToggle" Margin="0,0,12,0" VerticalAlignment="Center"
-                          Content="本机电量" Checked="SystemBattery_Changed" Unchecked="SystemBattery_Changed" />
+                          Style="{StaticResource WinUICheckBoxStyle}" Content="本机电量"
+                          Checked="SystemBattery_Changed" Unchecked="SystemBattery_Changed" />
                 <Button x:Name="RefreshButton" MinWidth="92" Padding="12,6"
                         Style="{StaticResource AppButtonStyle}" Click="Refresh_Click">
                     <StackPanel Orientation="Horizontal">
@@ -57,7 +58,7 @@
             <ItemsControl x:Name="DeviceList">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border Margin="0,0,0,8" Padding="16,12" Style="{StaticResource CardStyle}">
+                        <Border Margin="0,0,0,8" Padding="16,14" Style="{StaticResource CardStyle}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />

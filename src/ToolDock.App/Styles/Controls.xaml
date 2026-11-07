@@ -105,6 +105,34 @@
 
     <!-- 工具卡片按钮：图吧式图标卡（无边框、悬停高亮、圆角 8），供内置/自定义工具网格使用 -->
     <!-- 子页切换胶囊（页面内二级导航） -->
+    <!-- 下拉选择按钮（多选下拉的触发按钮）：外观与输入框一致，右侧留箭头位 -->
+    <Style x:Key="DropDownToggleStyle" TargetType="ToggleButton">
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Focusable" Value="True" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="Box" Height="{TemplateBinding Height}" Padding="{TemplateBinding Padding}"
+                            CornerRadius="4" BorderThickness="1"
+                            Background="{DynamicResource Btn.Background}"
+                            BorderBrush="{DynamicResource Btn.Stroke}">
+                        <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Stretch" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Box" Property="Background" Value="{DynamicResource Btn.Background.Hover}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Accent}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="SubTabStyle" TargetType="RadioButton">
         <Setter Property="Foreground" Value="{DynamicResource Text.Secondary}" />
         <Setter Property="Cursor" Value="Hand" />

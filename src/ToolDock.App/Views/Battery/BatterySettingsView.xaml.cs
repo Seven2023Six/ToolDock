@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using ToolDock.App.Services;
@@ -7,8 +9,8 @@ using ToolDock.App.Services;
 namespace ToolDock.App.Views;
 
 /// <summary>
-/// 设置子页：VigilWatt 设置页里的电量相关项——低电量阈值、采样间隔、历史保留、
-/// 本机电量、剩余时间估算，以及 2.4G 品牌插件开关（部分品牌需写帧才能读电量）。
+/// 电量设置子页：VigilWatt 设置页里的电量相关项——低电量阈值、采样间隔、历史保留、
+/// 本机电量、剩余时间估算、任务栏贴片，以及 2.4G 品牌插件（下拉多选，部分品牌需写帧才能读电量）。
 /// </summary>
 public partial class BatterySettingsView : UserControl
 {
@@ -52,17 +54,55 @@ public partial class BatterySettingsView : UserControl
         foreach (var plugin in BatteryMonitor.Instance.Plugins)
         {
             bool enabled = settings.PluginEnabled.TryGetValue(plugin.Name, out var on) && on;
-            _plugins.Add(new PluginRow
+            var row = new PluginRow
             {
                 Name = plugin.Name,
                 Title = string.IsNullOrEmpty(plugin.DisplayName) ? plugin.DisplayNameEn : plugin.DisplayName,
                 Subtitle = plugin.DisplayNameEn,
                 IsEnabled = enabled,
-            });
+            };
+            row.PropertyChanged += (_, _) => UpdatePluginSummary();
+            _plugins.Add(row);
         }
+        UpdatePluginSummary();
 
         _loaded = true;
         StatusText.Text = "";
+    }
+
+    /// <summary>下拉按钮上的汇总：0 个显示「未启用」，少量直接列名字，多了显示数量。</summary>
+    private void UpdatePluginSummary()
+    {
+        var enabled = _plugins.Where(p => p.IsEnabled).Select(p => p.Title).ToList();
+        PluginSummary.Text = enabled.Count switch
+        {
+            0 => "未启用",
+            <= 3 => string.Join("、", enabled),
+            _ => $"已启用 {enabled.Count} 个品牌",
+        };
+        // 弹层头部带上总数，方便在长列表里确认
+        if (PluginHeader is not null)
+        {
+            PluginHeader.Text = enabled.Count == 0
+                ? "选择要启用的品牌"
+                : $"选择要启用的品牌（已启用 {enabled.Count} / {_plugins.Count}）";
+        }
+    }
+
+    private void SelectAllPlugins_Click(object sender, RoutedEventArgs e)
+    {
+        foreach (var plugin in _plugins)
+        {
+            plugin.IsEnabled = true;
+        }
+    }
+
+    private void ClearPlugins_Click(object sender, RoutedEventArgs e)
+    {
+        foreach (var plugin in _plugins)
+        {
+            plugin.IsEnabled = false;
+        }
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)
@@ -104,11 +144,28 @@ public partial class BatterySettingsView : UserControl
         => int.TryParse(text, out var value) && value >= min && value <= max ? value : fallback;
 }
 
-/// <summary>品牌插件开关行。</summary>
-public sealed class PluginRow
+/// <summary>品牌插件下拉项（勾选即改 IsEnabled，汇总文本自动刷新）。</summary>
+public sealed class PluginRow : INotifyPropertyChanged
 {
+    private bool _isEnabled;
+
     public string Name { get; init; } = "";
     public string Title { get; init; } = "";
     public string Subtitle { get; init; } = "";
-    public bool IsEnabled { get; set; }
+
+    public bool IsEnabled
+    {
+        get => _isEnabled;
+        set
+        {
+            if (_isEnabled == value)
+            {
+                return;
+            }
+            _isEnabled = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsEnabled)));
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 }

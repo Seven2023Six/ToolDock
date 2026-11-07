@@ -4,19 +4,18 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Foreground="{DynamicResource Text.Primary}">
 
-    <!-- 设置子页：对应 VigilWatt 设置页里的电量相关项 -->
+    <!-- 电量设置：沿用内存清理页/设置页的排版语言（SectionTitle + SettingsCard + RowTitle/RowDesc/Divider） -->
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <ScrollViewer Grid.Row="0" Margin="20,0,20,0" VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-            <StackPanel MaxWidth="760" HorizontalAlignment="Left">
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="20,4,20,16">
 
-                <TextBlock Margin="2,0,0,8" FontSize="14" FontWeight="SemiBold" Text="提醒与采样" />
-                <Border Style="{StaticResource SettingsCardStyle}" Margin="0,0,0,16">
+                <TextBlock Text="提醒与采样" Style="{StaticResource SectionTitleStyle}" Margin="2,8,0,8" />
+                <Border Style="{StaticResource SettingsCardStyle}">
                     <StackPanel>
                         <Grid Margin="0,12">
                             <Grid.ColumnDefinitions>
@@ -24,12 +23,11 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource RowTitleStyle}" Text="低电量提醒阈值" />
-                                <TextBlock Style="{StaticResource RowDescStyle}" Margin="0,2,0,0"
-                                           Text="低于该电量时提醒；0 表示关闭" />
+                                <TextBlock Text="低电量提醒阈值" Style="{StaticResource RowTitleStyle}" />
+                                <TextBlock Text="低于该电量时提醒；0 表示关闭" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
                             </StackPanel>
-                            <TextBox x:Name="ThresholdBox" Grid.Column="1" Width="60" Height="32"
-                                     Style="{StaticResource WinUITextBoxStyle}" />
+                            <TextBox x:Name="ThresholdBox" Grid.Column="1" Width="56" Height="32"
+                                     VerticalContentAlignment="Center" Style="{StaticResource WinUITextBoxStyle}" />
                         </Grid>
                         <Border Style="{StaticResource RowDividerStyle}" />
                         <Grid Margin="0,12">
@@ -38,12 +36,11 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource RowTitleStyle}" Text="历史采样间隔（分钟）" />
-                                <TextBlock Style="{StaticResource RowDescStyle}" Margin="0,2,0,0"
-                                           Text="电量无变化时也按此间隔记一条历史" />
+                                <TextBlock Text="历史采样间隔" Style="{StaticResource RowTitleStyle}" />
+                                <TextBlock Text="分钟；电量无变化时也按此间隔记一条" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
                             </StackPanel>
-                            <TextBox x:Name="SampleBox" Grid.Column="1" Width="60" Height="32"
-                                     Style="{StaticResource WinUITextBoxStyle}" />
+                            <TextBox x:Name="SampleBox" Grid.Column="1" Width="56" Height="32"
+                                     VerticalContentAlignment="Center" Style="{StaticResource WinUITextBoxStyle}" />
                         </Grid>
                         <Border Style="{StaticResource RowDividerStyle}" />
                         <Grid Margin="0,12">
@@ -52,39 +49,73 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource RowTitleStyle}" Text="历史保留天数" />
-                                <TextBlock Style="{StaticResource RowDescStyle}" Margin="0,2,0,0"
-                                           Text="超期记录会被自动清理" />
+                                <TextBlock Text="历史保留天数" Style="{StaticResource RowTitleStyle}" />
+                                <TextBlock Text="超期记录会被自动清理" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
                             </StackPanel>
-                            <TextBox x:Name="RetentionBox" Grid.Column="1" Width="60" Height="32"
-                                     Style="{StaticResource WinUITextBoxStyle}" />
+                            <TextBox x:Name="RetentionBox" Grid.Column="1" Width="56" Height="32"
+                                     VerticalContentAlignment="Center" Style="{StaticResource WinUITextBoxStyle}" />
                         </Grid>
                     </StackPanel>
                 </Border>
 
-                <TextBlock Margin="2,0,0,8" FontSize="14" FontWeight="SemiBold" Text="监控范围" />
-                <Border Style="{StaticResource SettingsCardStyle}" Margin="0,0,0,16">
+                <TextBlock Text="监控范围" Style="{StaticResource SectionTitleStyle}" Margin="2,16,0,8" />
+                <Border Style="{StaticResource SettingsCardStyle}">
                     <StackPanel>
-                        <CheckBox x:Name="SystemBatteryToggle" Margin="0,12" Content="监控本机电量" />
-                        <Border Style="{StaticResource RowDividerStyle}" />
-                        <CheckBox x:Name="RemainingTimeToggle" Margin="0,12" Content="显示剩余可用时间估算" />
-                    </StackPanel>
-                </Border>
-
-                <TextBlock Margin="2,0,0,8" FontSize="14" FontWeight="SemiBold" Text="任务栏贴片" />
-                <Border Style="{StaticResource SettingsCardStyle}" Margin="0,0,0,16">
-                    <StackPanel>
-                        <CheckBox x:Name="PillToggle" Margin="0,12" Content="启用任务栏电量贴片" />
+                        <Grid Margin="0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="监控本机电量" Style="{StaticResource RowTitleStyle}" />
+                                <TextBlock Text="把笔记本电池也列进设备列表" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <CheckBox x:Name="SystemBatteryToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      Style="{StaticResource WinUICheckBoxStyle}" />
+                        </Grid>
                         <Border Style="{StaticResource RowDividerStyle}" />
                         <Grid Margin="0,12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" VerticalAlignment="Center"
-                                       Style="{StaticResource RowTitleStyle}" Text="显示内容" />
-                            <ComboBox x:Name="PillModeBox" Grid.Column="1" MinWidth="150" Height="32">
-                                <ComboBoxItem Content="全部设备（按电量升序）" />
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="剩余可用时间估算" Style="{StaticResource RowTitleStyle}" />
+                                <TextBlock Text="在设备卡片细节行显示「约 N 小时剩余」" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <CheckBox x:Name="RemainingTimeToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      Style="{StaticResource WinUICheckBoxStyle}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Text="任务栏贴片" Style="{StaticResource SectionTitleStyle}" Margin="2,16,0,8" />
+                <Border Style="{StaticResource SettingsCardStyle}">
+                    <StackPanel>
+                        <Grid Margin="0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="启用任务栏电量贴片" Style="{StaticResource RowTitleStyle}" />
+                                <TextBlock Text="把电量贴片嵌进任务栏，随任务栏一起显示" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <CheckBox x:Name="PillToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      Style="{StaticResource WinUICheckBoxStyle}" />
+                        </Grid>
+                        <Border Style="{StaticResource RowDividerStyle}" />
+                        <Grid Margin="0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="显示内容" Style="{StaticResource RowTitleStyle}" />
+                                <TextBlock Text="全部设备按电量升序排列，或只显示最低的一台" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <ComboBox x:Name="PillModeBox" Grid.Column="1" Width="168" Height="32" VerticalContentAlignment="Center">
+                                <ComboBoxItem Content="全部设备" />
                                 <ComboBoxItem Content="仅最低电量一台" />
                             </ComboBox>
                         </Grid>
@@ -94,46 +125,107 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" VerticalAlignment="Center"
-                                       Style="{StaticResource RowTitleStyle}" Text="最多显示设备数" />
-                            <ComboBox x:Name="PillMaxBox" Grid.Column="1" MinWidth="80" Height="32" />
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="最多显示设备数" Style="{StaticResource RowTitleStyle}" />
+                                <TextBlock Text="贴片越窄越省任务栏空间" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <ComboBox x:Name="PillMaxBox" Grid.Column="1" Width="80" Height="32" VerticalContentAlignment="Center" />
                         </Grid>
                     </StackPanel>
                 </Border>
 
-                <TextBlock Margin="2,0,0,8" FontSize="14" FontWeight="SemiBold" Text="2.4G 品牌插件" />
-                <Border Style="{StaticResource SettingsCardStyle}" Margin="0,0,0,16">
-                    <StackPanel>
-                        <TextBlock Margin="0,12,0,4" Style="{StaticResource RowDescStyle}"
-                                   TextWrapping="Wrap"
-                                   Text="部分品牌需要向设备发送查询帧才能读到电量（会写设备）。默认关闭，按需启用。" />
-                        <ItemsControl x:Name="PluginList">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Margin="0,6">
+                <TextBlock Text="2.4G 品牌插件" Style="{StaticResource SectionTitleStyle}" Margin="2,16,0,8" />
+                <Border Style="{StaticResource SettingsCardStyle}" Padding="16,4">
+                    <Grid Margin="0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock Text="已启用的品牌" Style="{StaticResource RowTitleStyle}" />
+                            <TextBlock Text="部分品牌需要向设备发送查询帧（会写设备）才能读到电量，默认关闭"
+                                       Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <ToggleButton x:Name="PluginDropToggle" Grid.Column="1"
+                                      MinWidth="200" Height="32" Padding="12,0"
+                                      AutomationProperties.Name="品牌插件多选"
+                                      Style="{StaticResource DropDownToggleStyle}"
+                                      IsChecked="{Binding IsOpen, ElementName=PluginPopup, Mode=TwoWay}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="PluginSummary" VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis" Text="未启用" />
+                                <TextBlock Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center"
+                                           FontFamily="Segoe MDL2 Assets" FontSize="10" Text="&#xE70D;" />
+                            </Grid>
+                        </ToggleButton>
+
+                        <Popup x:Name="PluginPopup"
+                               PlacementTarget="{Binding ElementName=PluginDropToggle}"
+                               Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+                            <Border Margin="0,4,0,0" Padding="12,10,12,12" Style="{StaticResource CardStyle}"
+                                    Background="{DynamicResource Bg.Solid}" MinWidth="320">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+
+                                    <Grid Grid.Row="0" Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                            <TextBlock Style="{StaticResource RowTitleStyle}" Text="{Binding Title}" />
-                                            <TextBlock Style="{StaticResource RowDescStyle}" Margin="0,2,0,0"
-                                                       Text="{Binding Subtitle}" />
+                                        <TextBlock x:Name="PluginHeader" Style="{StaticResource CardLabelStyle}"
+                                                   VerticalAlignment="Center" Text="选择要启用的品牌" />
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <Button Content="全选" Padding="8,2" FontSize="12"
+                                                    Style="{StaticResource AppButtonStyle}" Click="SelectAllPlugins_Click" />
+                                            <Button Content="清空" Padding="8,2" FontSize="12" Margin="6,0,0,0"
+                                                    Style="{StaticResource AppButtonStyle}" Click="ClearPlugins_Click" />
                                         </StackPanel>
-                                        <CheckBox Grid.Column="1" VerticalAlignment="Center"
-                                                  IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
                                     </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
+
+                                    <ScrollViewer Grid.Row="1" MaxHeight="300" VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl x:Name="PluginList" Margin="0,0,4,0">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="0,3">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Title}" FontSize="13" />
+                                                            <TextBlock Text="{Binding Subtitle}" Margin="8,0,0,0" FontSize="11"
+                                                                       Foreground="{DynamicResource Text.Tertiary}"
+                                                                       VerticalAlignment="Center" />
+                                                        </StackPanel>
+                                                        <CheckBox Grid.Column="1" VerticalAlignment="Center"
+                                                                  AutomationProperties.Name="{Binding Title}"
+                                                                  Style="{StaticResource WinUICheckBoxStyle}"
+                                                                  IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Grid>
+                            </Border>
+                        </Popup>
+                    </Grid>
                 </Border>
             </StackPanel>
         </ScrollViewer>
 
-        <Border Grid.Row="1" Margin="20,8,20,12">
+        <Border Grid.Row="1" Margin="20,0,20,12" Padding="0,10,0,0"
+                BorderBrush="{DynamicResource Divider}" BorderThickness="0,1,0,0">
             <StackPanel Orientation="Horizontal">
-                <Button x:Name="SaveButton" MinWidth="120" Padding="14,6"
+                <Button x:Name="SaveButton" MinWidth="120" Height="34"
                         Style="{StaticResource PrimaryButtonStyle}" Click="Save_Click" Content="保存设置" />
                 <TextBlock x:Name="StatusText" Margin="12,0,0,0" VerticalAlignment="Center"
                            FontSize="12" Foreground="{DynamicResource Text.Secondary}" />
