@@ -20,10 +20,7 @@ public sealed class TaskbarPillWindow : IDisposable
     private const string WindowTitle = "工具坞 任务栏电量";
     private const int FollowIntervalMs = 1000;
 
-    /// <summary>拖动轮询节拍；手停住时退到 <see cref="DragIdleTickMs"/>，见 docs/dev/runtime-pitfalls.md §16.5。</summary>
-    private const int DragTickMs = 16;
-    private const int DragIdleTickMs = 100;
-    private const int DragIdleTicks = 3;
+    /// <summary>贴片位置固定：不支持手动拖拽（2026-11 用户要求），偏移恒为零。</summary>
 
     private const double MinHeightDip = 22, MaxHeightDip = 40;
     private const double TaskbarMarginDip = 6;
@@ -42,7 +39,6 @@ public sealed class TaskbarPillWindow : IDisposable
 
     private readonly Dispatcher _dispatcher = Dispatcher.CurrentDispatcher;
     private readonly DispatcherTimer _timer;
-    private readonly DispatcherTimer _dragTimer;
 
     private IntPtr _hwnd, _taskbar, _tipHwnd;
     private IntPtr _memDc, _dib, _oldDib, _dibBits;
@@ -57,10 +53,6 @@ public sealed class TaskbarPillWindow : IDisposable
     private int _offsetPx;
     private int _offsetDpi;
     private uint _windowDpi;
-    private bool _dragging;
-    private int _dragStartCursor, _dragStartOffset;
-    private int _dragIdleTicks, _pollX, _pollY;
-    private bool _btnWasDown;   // 上轮询左键状态，用于检测按下边缘
     private bool _taskbarHorizontal = true;
     private PixelRect _taskbarRect, _trayRect;
     private int _refreshQueued;
@@ -90,13 +82,6 @@ public sealed class TaskbarPillWindow : IDisposable
         _onInvalidate = onInvalidate;
         LoadOffsetFromSettings();
 
-        // 拖动轮询表常驻运行（20Hz）：Win11 任务栏 XAML 输入管理器会吃掉子窗口的鼠标消息，
-        // 不能靠 WM_LBUTTONDOWN 启动拖动，只能轮询检测（runtime-pitfalls.md §16.5.1）。
-        _dragTimer = new DispatcherTimer();
-        _dragTimer.Interval = TimeSpan.FromMilliseconds(DragIdleTickMs);
-        _dragTimer.Tick += (_, _) => OnDragTick();
-        _dragTimer.Start();
-
         EnsureWindow();
 
         // 可反复开/关（设置页每次保存都可能 Dispose 后置 null），订阅必须用命名方法并在 Dispose 里解绑
@@ -113,9 +98,16 @@ public sealed class TaskbarPillWindow : IDisposable
 
     private void LoadOffsetFromSettings()
     {
+        // 位置固定：历史拖出的偏移一律清零，顺手把旧值从配置里清掉
         var s = PillHost.Settings;
-        _offsetPx = s.TaskbarBatteryOffsetX;
-        _offsetDpi = s.TaskbarBatteryOffsetDpi;
+        if (s.TaskbarBatteryOffsetX != 0 || s.TaskbarBatteryOffsetDpi != 0)
+        {
+            s.TaskbarBatteryOffsetX = 0;
+            s.TaskbarBatteryOffsetDpi = 0;
+            s.Save();
+        }
+        _offsetPx = 0;
+        _offsetDpi = 0;
     }
 
     private void OnDeviceUpdated(DeviceStatus _) => RequestRefresh();
@@ -153,7 +145,6 @@ public sealed class TaskbarPillWindow : IDisposable
         s.TaskbarBatteryOffsetX = 0;
         s.TaskbarBatteryOffsetDpi = _offsetDpi;
         s.Save();
-        EndDrag();
         _needRender = true;
         Update();
     }
@@ -166,8 +157,6 @@ public sealed class TaskbarPillWindow : IDisposable
         try
         {
             _timer.Stop();
-            _dragTimer.Stop();
-            EndDrag();
             PillHost.Manager.DeviceUpdated -= OnDeviceUpdated;
             PillHost.Manager.DevicesChanged -= OnDevicesChanged;
             HideTip();
@@ -323,7 +312,6 @@ public sealed class TaskbarPillWindow : IDisposable
                 _onInvalidate();
                 return;
             }
-            EndDrag();
             ReleaseWindow();
             _taskbarRect = default;
             _trayRect = default;
@@ -335,7 +323,6 @@ public sealed class TaskbarPillWindow : IDisposable
 
     private void ReleaseWindow()
     {
-        EndDrag();
         ReleaseTipWindow();
         if (_hwnd != IntPtr.Zero)
         {
@@ -522,10 +509,6 @@ public sealed class TaskbarPillWindow : IDisposable
         int gap = (int)Math.Round(EdgeGapDip * Scale);
         int placeOffset = OffsetForCurrentDpi(out _);
         var (x, y) = TaskbarLayout.Place(_taskbarRect, _trayRect, _pillW, _pillH, placeOffset, gap, out int applied);
-        // 过渡帧（拔插显示器时任务栏/托盘矩形短暂错位）也会夹紧；只有拖动中才把夹紧结果写回记忆，
-        // 否则分辨率往返后用户偏移会被污染。反推写回语义见 docs/dev/runtime-pitfalls.md §16.5。
-        if (_dragging) _offsetPx = applied;
-
         // 子窗口的坐标是**相对父窗口客户区**的，定位数学算出来的是屏幕坐标，这里换算一次
         var pt = new Native.POINT { X = x, Y = y };
         Native.ScreenToClient(_taskbar, ref pt);
@@ -542,7 +525,6 @@ public sealed class TaskbarPillWindow : IDisposable
             _offsetDpi = (int)currentDpi;
             return _offsetPx;
         }
-        if (_dragging) return _offsetPx;
         return TaskbarLayout.ScaleOffset(_offsetPx, (uint)_offsetDpi, currentDpi);
     }
 
@@ -684,121 +666,14 @@ public sealed class TaskbarPillWindow : IDisposable
 
     private void OnLButtonDown()
     {
-        if (_dragging) return;   // 轮询可能已经先检测到并启动了
-
+        // 贴片位置固定（不支持拖拽）：按下只收尾悬停提示
         HideTip();
         _hoverId = null;
         _hoverArmed = false;
-
-        // 用当帧可见（已夹紧）的偏移做起点：屏幕变窄贴片贴边时，一拖不会跳回越界前的记忆值
-        int gap = (int)Math.Round(EdgeGapDip * Scale);
-        int placeOffset = OffsetForCurrentDpi(out uint dpi);
-        TaskbarLayout.Place(_taskbarRect, _trayRect, _pillW, _pillH, placeOffset, gap, out int visible);
-        _offsetPx = visible;
-        _offsetDpi = (int)dpi;
-
-        _dragging = true;
-        _dragStartOffset = visible;
-
-        var p = Native.GetCursorPos();
-        _dragStartCursor = _taskbarHorizontal ? p.X : p.Y;
-        _pollX = p.X;
-        _pollY = p.Y;
-        _dragIdleTicks = 0;
-
-        _dragTimer.Interval = TimeSpan.FromMilliseconds(DragTickMs);
-    }
-
-    /// <summary>
-    /// 常驻轮询（20Hz 起步，拖动中切 60Hz）：Win11 任务栏 XAML 会吃掉子窗口鼠标消息，
-    /// 不能靠 WM_LBUTTONDOWN 启动拖动，只能直接读全局按键状态（runtime-pitfalls.md §16.5.1）。
-    /// </summary>
-    private void OnDragTick()
-    {
-        if (_disposed) return;
-
-        bool btnDown = (Native.GetAsyncKeyState(Native.VK_LBUTTON) & 0x8000) != 0;
-        var p = Native.GetCursorPos();
-
-        if (!_dragging)
-        {
-            // 检测按下边缘：上一轮没按、这一轮按了，且光标落在贴片内 → 启动拖动
-            if (btnDown && !_btnWasDown && IsCursorInPill(p))
-            {
-                OnLButtonDown();
-            }
-        }
-        else
-        {
-            if (!btnDown)
-            {
-                EndDrag();
-                _btnWasDown = false;
-                return;
-            }
-
-            bool moved = p.X != _pollX || p.Y != _pollY;
-            _pollX = p.X;
-            _pollY = p.Y;
-
-            // 手停住就退到 20Hz：只有真在拖时才需要 60Hz，松手最多晚 50ms 发现
-            if (!moved)
-            {
-                if (++_dragIdleTicks >= DragIdleTicks)
-                    _dragTimer.Interval = TimeSpan.FromMilliseconds(DragIdleTickMs);
-                _btnWasDown = true;
-                return;
-            }
-
-            _dragIdleTicks = 0;
-            _dragTimer.Interval = TimeSpan.FromMilliseconds(DragTickMs);
-
-            int next = _dragStartOffset + ((_taskbarHorizontal ? p.X : p.Y) - _dragStartCursor);
-            if (next == _offsetPx)
-            {
-                _btnWasDown = true;
-                return;
-            }
-            _offsetPx = next;
-            ApplyPosition();
-        }
-
-        _btnWasDown = btnDown;
-    }
-
-    /// <summary>光标当前是否落在贴片矩形内（屏幕坐标）。</summary>
-    private bool IsCursorInPill(Native.POINT p)
-    {
-        if (_hwnd == IntPtr.Zero || !Native.GetWindowRect(_hwnd, out var r)) return false;
-        return p.X >= r.Left && p.X < r.Right && p.Y >= r.Top && p.Y < r.Bottom;
-    }
-
-    /// <summary>结束拖动：偏移真变了才写盘（单击一下不该产生一次磁盘写）。</summary>
-    private void EndDrag()
-    {
-        if (!_dragging) return;
-        _dragging = false;
-        _dragTimer.Interval = TimeSpan.FromMilliseconds(DragIdleTickMs);
-
-        if (_offsetPx == _dragStartOffset) return;
-        var s = PillHost.Settings;
-        s.TaskbarBatteryOffsetX = _offsetPx;
-        s.TaskbarBatteryOffsetDpi = _offsetDpi;
-        s.Save();
-        Log.Debug($"任务栏贴片：拖动结束，offset={_offsetPx} dpi={_offsetDpi}");
     }
 
     private void OnMouseMove(IntPtr lParam)
     {
-        if (_dragging)
-        {
-            var p = Native.GetCursorPos();
-            // 只沿任务栏方向拖：横向任务栏走 X，竖向走 Y（斜着拖不会把贴片拽离任务栏）
-            _offsetPx = _dragStartOffset + ((_taskbarHorizontal ? p.X : p.Y) - _dragStartCursor);
-            ApplyPosition();
-            return;
-        }
-
         long lp = lParam.ToInt64();
         int x = unchecked((short)(lp & 0xFFFF));
         string? id = HitIdAt(x);
@@ -820,7 +695,7 @@ public sealed class TaskbarPillWindow : IDisposable
     private void OnMouseHover()
     {
         _hoverArmed = false;
-        if (_disposed || _dragging || _hoverId == null) return;
+        if (_disposed || _hoverId == null) return;
         int i = IndexOfHit(_hoverId);
         if (i < 0) return;
         ShowTip(_hits[i]);
@@ -1012,13 +887,9 @@ public sealed class TaskbarPillWindow : IDisposable
         _shownTipId = null;
     }
 
-    private void OnLButtonUp() => EndDrag();
+    private void OnLButtonUp() => HideTip();
 
-    private void OnDoubleClick()
-    {
-        if (_dragging) EndDrag();
-        PillActions.ShowMainWindow();
-    }
+    private void OnDoubleClick() => PillActions.ShowMainWindow();
 
     private void OnRightClick()
     {
