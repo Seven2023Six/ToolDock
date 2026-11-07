@@ -15,7 +15,7 @@ public partial class App : Application
 
             DispatcherUnhandledException += (_, args) =>
             {
-                // 外壳要命比插件要紧：任何未处理异常先保住进程，M3 接日志后细化
+                // 外壳要命比插件要紧：任何未处理异常先保住进程
                 StartupLog("app: DispatcherUnhandledException " + args.Exception);
                 MessageBox.Show($"工具坞遇到未处理的错误：\n{args.Exception.Message}", "工具坞 ToolDock",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -36,12 +36,10 @@ public partial class App : Application
             var theme = link.Connected && link.WelcomeTheme is not null
                 ? link.WelcomeTheme
                 : Core.AppSettings.Load().Theme;
-            ThemeService.Initialize(theme);
-            var backdrop = link.Connected
-                ? AgentLink.Instance.CurrentBackdrop
-                : Core.AppSettings.Load().Backdrop;
-            BackdropService.Initialize(backdrop);
-            StartupLog($"app: 主题 {theme} / 材质 {backdrop} 就绪");
+
+            // WPF Fluent 主题（net10 内置）：Light / Dark / System 三态，切换与系统联动都由框架完成
+            ApplyThemeMode(theme);
+            StartupLog($"app: 主题 {theme} 就绪");
 
             var mainWindow = new MainWindow();
             StartupLog("app: 主窗构造完成");
@@ -54,6 +52,17 @@ public partial class App : Application
             StartupLog("app: 启动失败 " + exception);
             throw;
         }
+    }
+
+    /// <summary>应用 ThemeMode（容忍未知值，回退 Light）。</summary>
+    public static void ApplyThemeMode(string theme)
+    {
+        Current.ThemeMode = theme switch
+        {
+            "Dark" => ThemeMode.Dark,
+            "System" => ThemeMode.System,
+            _ => ThemeMode.Light,
+        };
     }
 
     private static void StartupLog(string line)

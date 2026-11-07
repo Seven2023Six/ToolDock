@@ -1,49 +1,133 @@
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using ToolDock.App.Services;
+using ToolDock.Core;
 
 namespace ToolDock.App.Views;
 
-/// <summary>首页 · Widget 墙：时钟与内存实时刷新；电量/清理/开关随里程碑接入。</summary>
+/// <summary>首页：Gallery 卡片风格的总览（内存 / 时间 / 快捷开关 / 运行状态）。</summary>
 public partial class HomePage : UserControl
 {
     private readonly DispatcherTimer _timer;
+    private bool _syncing;
 
     public HomePage()
     {
         InitializeComponent();
         _timer = new DispatcherTimer(DispatcherPriority.Background)
         {
-            Interval = TimeSpan.FromSeconds(1),
+            Interval = TimeSpan.FromSeconds(2),
         };
-        _timer.Tick += (_, _) => Refresh();
-        Loaded += (_, _) => { Refresh(); _timer.Start(); };
+        _timer.Tick += (_, _) => RefreshAll();
+        Loaded += (_, _) => { LoadState(); RefreshAll(); _timer.Start(); };
         Unloaded += (_, _) => _timer.Stop();
     }
 
-    private void Refresh()
+    private void RefreshAll()
     {
-        var now = DateTime.Now;
-        ClockText.Text = now.ToString("HH:mm");
-        DateText.Text = $"{now.Month}月{now.Day}日 {ToChineseWeekDay(now.DayOfWeek)}";
+        if (SystemMemory.Read() is { } memory)
+        {
+            UsageText.Text = memory.LoadPercent + "%";
+            UsageBar.Value = memory.LoadPercent;
+            MemFootnoteText.Text = $"已用 {memory.UsedGiB:0.0} / {memory.TotalGiB:0.0} GB";
+        }
 
-        if (SystemMemory.Read() is not { } memory)
+        var now = DateTime.Now;
+        ClockText.Text = now.ToString("HH:mm:ss");
+        DateText.Text = now.ToString("yyyy年M月d日 dddd");
+
+        var link = AgentLink.Instance;
+        if (link.Connected)
+        {
+            AgentStatusText.Text = $"托盘常驻运行中 · 清理区域 0x{link.CurrentMask:X}\n" +
+                $"自动清理 {(link.CurrentAutoClean ? $"开（阈值 {link.CurrentThreshold}% / 间隔 {link.CurrentIntervalM} 分）" : "关")} · " +
+                $"免 UAC {(link.CurrentSkipUac ? "开" : "关")}";
+        }
+        else
+        {
+            AgentStatusText.Text = "独立模式：托盘 Agent 未运行，部分开关仅保存在本地设置";
+        }
+    }
+
+    private void LoadState()
+    {
+        _syncing = true;
+        var link = AgentLink.Instance;
+        bool auto_clean, skip_uac, auto_start;
+        if (link.Connected)
+        {
+            auto_clean = link.CurrentAutoClean;
+            skip_uac = link.CurrentSkipUac;
+            auto_start = link.CurrentAutoStart;
+        }
+        else
+        {
+            var settings = AppSettings.Load();
+            auto_clean = settings.AutoCleanEnabled;
+            skip_uac = settings.AutoCleanSkipUac;
+            auto_start = settings.AutoStart;
+        }
+
+        AutoCleanToggle.IsChecked = auto_clean;
+        SkipUacToggle.IsChecked = skip_uac;
+        AutoStartToggle.IsChecked = auto_start;
+        _syncing = false;
+    }
+
+    private void SendToggles()
+    {
+        if (_syncing)
         {
             return;
         }
-        MemUsageText.Text = memory.LoadPercent.ToString();
-        MemUsedColumn.Width = new System.Windows.GridLength(memory.LoadPercent, System.Windows.GridUnitType.Star);
-        MemFootnoteText.Text = $"已用 {memory.UsedGiB:0.0} / {memory.TotalGiB:0.0} GB";
+        bool auto_clean = AutoCleanToggle.IsChecked == true;
+        bool skip_uac = SkipUacToggle.IsChecked == true;
+        var link = AgentLink.Instance;
+        if (link.Connected)
+        {
+            link.SendCleanCfg(link.CurrentMask, auto_clean, link.CurrentThreshold, link.CurrentIntervalM,
+                link.CurrentAllowFreezes, link.CurrentConfirmClean);
+            link.SendSkipUac(skip_uac);
+            link.SendAutoStart(AutoStartToggle.IsChecked == true);
+        }
+        else
+        {
+            var settings = AppSettings.Load();
+            settings.AutoCleanEnabled = auto_clean;
+            settings.AutoCleanSkipUac = skip_uac;
+            settings.AutoStart = AutoStartToggle.IsChecked == true;
+            settings.Save();
+        }
     }
 
-    private static string ToChineseWeekDay(DayOfWeek day) => day switch
+    private void AutoClean_Changed(object sender, RoutedEventArgs e) => SendToggles();
+
+    private void SkipUac_Changed(object sender, RoutedEventArgs e)
     {
-        DayOfWeek.Monday => "星期一",
-        DayOfWeek.Tuesday => "星期二",
-        DayOfWeek.Wednesday => "星期三",
-        DayOfWeek.Thursday => "星期四",
-        DayOfWeek.Friday => "星期五",
-        DayOfWeek.Saturday => "星期六",
-        _ => "星期日",
-    };
+        SendToggles();
+    }
+
+    private void AutoStart_Changed(object sender, RoutedEventArgs e) => SendToggles();
+
+    private void CleanNow_Click(object sender, RoutedEventArgs e)
+    {
+        var link = AgentLink.Instance;
+        if (link.Connected)
+        {
+            link.SendCleanNow(confirmed: false);
+        }
+        else
+        {
+            if (CleanupCore.IsElevated())
+            {
+                var result = CleanupCore.Clean(CleanupCore.MaskDefault);
+                MemFootnoteText.Text = $"已释放 {result.FreedBytes / 1073741824.0:0.00} GB";
+            }
+            else
+            {
+                MemFootnoteText.Text = "独立模式无管理员权限，无法清理";
+            }
+        }
+    }
 }

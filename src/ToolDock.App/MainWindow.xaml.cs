@@ -1,109 +1,133 @@
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
-using ToolDock.App.Services;
+using System.Windows.Shell;
 using ToolDock.App.Views;
 
 namespace ToolDock.App;
 
+/// <summary>
+/// 主窗外壳（视觉结构对齐 WPFGallery MainWindow）：
+/// 44px 自绘标题栏 + 左侧树形导航 + 底部设置按钮 + 圆角内容卡片。
+/// 主题由 App.OnStartup 的 ThemeMode 驱动（WPF Fluent 内置）。
+/// </summary>
 public partial class MainWindow : Window
 {
-    private readonly Dictionary<string, Control> _pageCache = new();
+    public ObservableCollection<NavItem> NavItems { get; } = new()
+    {
+        new("首页", "\uE80F", "home"),
+        new("设备电量", "\uE850", "battery"),
+        new("内存清理", "\uE74F", "memclean"),
+    };
+
+    private bool _navLocking;
 
     public MainWindow()
     {
         InitializeComponent();
+        DataContext = this;
 
-        NativeBackdrop.EnableDarkMode(this, ThemeService.Current == ThemeService.Dark);
-        ApplyBackdropToWindow();
+        WindowChrome.SetWindowChrome(this, new WindowChrome
+        {
+            CaptionHeight = 50,
+            CornerRadius = new CornerRadius(12),
+            GlassFrameThickness = new Thickness(-1),
+            ResizeBorderThickness = new Thickness(4),
+            UseAeroCaptionButtons = true,
+            NonClientFrameEdges = NonClientFrameEdges.Right | NonClientFrameEdges.Bottom | NonClientFrameEdges.Left,
+        });
 
-        ThemeService.ThemeChanged += OnThemeChanged;
-        BackdropService.BackdropChanged += OnBackdropChanged;
-
-        // XAML 中 IsChecked="True" 触发的 Checked 在 InitializeComponent 期间被守卫跳过，这里补上首屏
+        StateChanged += (_, _) => UpdateMainWindowVisuals();
+        SelectNav("home");
         ShowPage("home");
     }
 
-    private void OnThemeChanged(string theme)
+    private void UpdateMainWindowVisuals()
     {
-        NativeBackdrop.EnableDarkMode(this, theme == ThemeService.Dark);
+        MainGrid.Margin = WindowState == WindowState.Maximized ? new Thickness(8) : default;
     }
 
-    private void OnBackdropChanged(string mode)
+    /// <summary>按 PageKey 选中导航项（TreeView.SelectedItem 只读，需经容器设置）。</summary>
+    private void SelectNav(string pageKey)
     {
-        ApplyBackdropToWindow();
-    }
-
-    /// <summary>按当前材质重涂窗口：Mica/亚克力失败自动回退纯色（对齐 VigilWatt ApplyBackdrop 策略）。</summary>
-    private void ApplyBackdropToWindow()
-    {
-        var mode = BackdropService.Current;
-        if (mode != BackdropService.Solid)
+        _navLocking = true;
+        for (int i = 0; i < NavItems.Count; i++)
         {
-            bool applied = mode == BackdropService.Acrylic
-                ? NativeBackdrop.TryApplyAcrylic(this)
-                : NativeBackdrop.TryApplyMica(this);
-            if (applied)
+            if (NavList.ItemContainerGenerator.ContainerFromIndex(i) is TreeViewItem tvi)
             {
-                Root.Background = null; // 材质透出
-                return;
+                tvi.IsSelected = NavItems[i].PageKey == pageKey;
             }
         }
-        NativeBackdrop.SetBackdropNone(this);
-        Root.Background = (System.Windows.Media.Brush)FindResource("Bg.Solid");
+        _navLocking = false;
     }
 
-    /// <summary>Agent 通知"界面被再次请求"（托盘又点了一次打开）：置前已有窗口。</summary>
+    /// <summary>托盘"打开"时置前（Agent 经管道推 activate 消息）。</summary>
     public void BringToFront()
     {
         if (WindowState == WindowState.Minimized)
         {
             WindowState = WindowState.Normal;
         }
-        Show();
         Activate();
-    }
-
-    protected override void OnClosed(EventArgs e)
-    {
-        ThemeService.ThemeChanged -= OnThemeChanged;
-        BackdropService.BackdropChanged -= OnBackdropChanged;
-        base.OnClosed(e);
-    }
-
-    private void Nav_Checked(object sender, RoutedEventArgs e)
-    {
-        // XAML 里 IsChecked="True" 会在 InitializeComponent 期间触发本事件，此时页面表还没建好
-        if (_pageCache.Count == 0)
-        {
-            return;
-        }
-        if (sender is RadioButton { CommandParameter: string key })
-        {
-            ShowPage(key);
-        }
+        Focus();
     }
 
     private void ShowPage(string key)
     {
-        if (!_pageCache.TryGetValue(key, out var page))
+        PageHost.Content = key switch
         {
-            page = key switch
+            "battery" => new BatteryPage(),
+            "memclean" => new MemCleanPage(),
+            "settings" => new SettingsPage(),
+            _ => new HomePage(),
+        };
+    }
+
+    private void NavList_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+    {
+        if (_navLocking || e.NewValue is not NavItem item)
+        {
+            return;
+        }
+        ShowPage(item.PageKey);
+    }
+
+    private void SettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        // 设置固定在导航底部（Gallery 模式）；清除列表选中态避免与列表项冲突
+        _navLocking = true;
+        for (int i = 0; i < NavItems.Count; i++)
+        {
+            if (NavList.ItemContainerGenerator.ContainerFromIndex(i) is TreeViewItem tvi)
             {
-                "home" => new HomePage(),
-                "battery" => new BatteryPage(),
-                "memclean" => new MemCleanPage(),
-                "settings" => new SettingsPage(),
-                "about" => new AboutPage(),
-                _ => null,
-            };
-            if (page is not null)
-            {
-                _pageCache[key] = page;
+                tvi.IsSelected = false;
             }
         }
-        if (page is not null)
+        _navLocking = false;
+        ShowPage("settings");
+    }
+
+    private void MinimizeWindow(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    private void MaximizeWindow(object sender, RoutedEventArgs e)
+    {
+        if (WindowState == WindowState.Maximized)
         {
-            PageHost.Content = page;
+            WindowState = WindowState.Normal;
+            MaximizeIcon.Text = "\uE922";
+        }
+        else
+        {
+            WindowState = WindowState.Maximized;
+            MaximizeIcon.Text = "\uE923";
         }
     }
+
+    private void CloseWindow(object sender, RoutedEventArgs e) => Application.Current.Shutdown();
+}
+
+/// <summary>导航项（图标字形来自 Segoe Fluent Icons）。</summary>
+public record NavItem(string Title, string IconGlyph, string PageKey)
+{
+    public Collection<NavItem> Items { get; } = new();
 }

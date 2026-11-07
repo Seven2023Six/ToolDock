@@ -36,9 +36,6 @@ internal sealed class AgentLink : IDisposable
     public bool CurrentAllowFreezes { get; set; }
     public bool CurrentConfirmClean { get; set; } = true;
 
-    /// <summary>Agent 下发的窗口材质（连接成功时有效），随设置变更更新。</summary>
-    public string CurrentBackdrop { get; set; } = "Mica";
-
     /// <summary>Agent 下发的开机自启状态，随设置变更更新。</summary>
     public bool CurrentAutoStart { get; set; }
 
@@ -81,7 +78,6 @@ internal sealed class AgentLink : IDisposable
             _pipe = pipe;
             Connected = true;
             WelcomeTheme = welcome.Theme;
-            CurrentBackdrop = welcome.Backdrop ?? "Mica";
             CurrentAutoStart = welcome.AutoStart;
             CurrentMask = welcome.Mask;
             CurrentAutoClean = welcome.AutoClean;
@@ -135,8 +131,8 @@ internal sealed class AgentLink : IDisposable
         });
     }
 
-    /// <summary>窗口材质变更回传 Agent 落盘（发射后不管，同 SendTheme）。</summary>
-    public void SendBackdrop(string backdrop)
+    /// <summary>气泡通知开关回传 Agent（发射后不管）。</summary>
+    public void SendNotify(bool enabled)
     {
         if (!Connected || _pipe is null)
         {
@@ -150,7 +146,7 @@ internal sealed class AgentLink : IDisposable
                 await _writeGate.WaitAsync().ConfigureAwait(false);
                 try
                 {
-                    await PipeFrame.WriteAsync(pipe, new PipeMessage { T = "setBackdrop", Backdrop = backdrop }, CancellationToken.None)
+                    await PipeFrame.WriteAsync(pipe, new PipeMessage { T = "setNotify", Enable = enabled }, CancellationToken.None)
                         .ConfigureAwait(false);
                 }
                 finally

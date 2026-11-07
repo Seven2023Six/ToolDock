@@ -5,6 +5,12 @@ using ToolDock.Agent.Native;
 
 namespace ToolDock.Agent;
 
+/// <summary>跨进程会话的运行时开关（设置页经管道下发）。</summary>
+internal static class AgentRuntimeState
+{
+    public static bool NotificationsEnabled = true;
+}
+
 /// <summary>后台插件拿到的上下文：托盘/通知共享，设置与日志按插件隔离。</summary>
 internal sealed class PluginContext(string pluginId, TrayIconController tray) : IAgentContext
 {
@@ -25,7 +31,13 @@ internal sealed class TrayServiceAdapter(TrayIconController tray, string pluginI
 
 internal sealed class BalloonNotifier(TrayIconController tray) : INotificationService
 {
-    public void Show(string title, string message) => tray.ShowBalloon(title, message);
+    public void Show(string title, string message)
+    {
+        if (AgentRuntimeState.NotificationsEnabled)
+        {
+            tray.ShowBalloon(title, message);
+        }
+    }
 }
 
 /// <summary>按插件隔离的 JSON 设置存储（%APPDATA%\ToolDock\plugindata\&lt;id&gt;.json）。

@@ -5,17 +5,14 @@ namespace ToolDock.Core;
 /// <summary>Agent ⇄ App 管道消息（单类承载全部消息类型，字段随用随加）。</summary>
 public sealed class PipeMessage
 {
-    /// <summary>消息类型：hello / welcome / getSettings / settings / setTheme / setBackdrop / setAutoStart / activate</summary>
+    /// <summary>消息类型：hello / welcome / getSettings / settings / setTheme / setNotify / setAutoStart / activate</summary>
     public string? T { get; set; }
 
     /// <summary>协议版本（hello）。</summary>
     public int Ver { get; set; }
 
-    /// <summary>主题名：Light / Dark（welcome / settings / setTheme）。</summary>
+    /// <summary>主题名：Light / Dark / System（welcome / settings / setTheme）。</summary>
     public string? Theme { get; set; }
-
-    /// <summary>窗口材质：Mica / Acrylic / Solid（welcome / settings / setBackdrop）。</summary>
-    public string? Backdrop { get; set; }
 
     /// <summary>开机自启开关状态（welcome / settings / setAutoStart）。</summary>
     public bool AutoStart { get; set; }

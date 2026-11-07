@@ -3,7 +3,8 @@
   <!-- 按需 GUI：关窗即退，常驻的是 Agent。托盘已迁走，不再需要 WinForms。 -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- net10：使用 WPF 内置 Fluent 主题（PresentationFramework.Fluent）与 ThemeMode -->
+    <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -11,6 +12,7 @@
     <RootNamespace>ToolDock.App</RootNamespace>
     <ApplicationIcon>..\..\assets\app.ico</ApplicationIcon>
     <Version>0.2.0</Version>
+    <NoWarn>$(NoWarn);WPF0001</NoWarn>
   </PropertyGroup>
 
   <!-- 界面进程短命（关窗即退），非并发 GC 略降内存开销 -->

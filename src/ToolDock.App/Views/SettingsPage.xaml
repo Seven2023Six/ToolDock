@@ -1,136 +1,433 @@
-<UserControl x:Class="ToolDock.App.Views.SettingsPage"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+<UserControl
+    x:Class="ToolDock.App.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:ToolDock.App.Controls"
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}">
 
-    <!-- 结构对齐 VigilWatt 设置页：页头固定 + ScrollViewer 内容 + 分节/行语言；内容通栏铺满 -->
+    <!--
+      设置页（对齐 WPFGallery SettingsPage 的卡片语言，功能补齐）：
+      外观（主题三态） / 通知 / 启动 / 内存清理策略 / 日志 / 关于。
+    -->
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Margin="20,16,20,8">
-            <TextBlock Text="设置" Style="{StaticResource PageTitleStyle}" />
-            <TextBlock Text="外观、托盘与启动、日志" Style="{StaticResource PageSubtitleStyle}" Margin="0,2,0,0" />
-        </StackPanel>
+        <controls:PageHeader
+            Grid.Row="0"
+            Margin="0,0,0,40"
+            Title="设置"
+            Description="管理工具坞的外观、通知、启动与清理策略" />
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" FocusVisualStyle="{x:Null}">
-            <StackPanel Margin="20,8,20,16">
-
+        <ScrollViewer Grid.Row="1" Margin="0,0,0,24" Padding="0,0,24,0">
+            <StackPanel>
                 <!-- 外观 -->
-                <StackPanel Margin="0,0,0,18">
-                    <StackPanel Orientation="Horizontal" Margin="2,0,0,8">
-                        <Border Width="3" Height="14" CornerRadius="1.5" VerticalAlignment="Center"
-                                Background="{DynamicResource Accent}" />
-                        <TextBlock Text="外观" Style="{StaticResource SectionTitleStyle}" Margin="8,0,0,0" />
-                    </StackPanel>
-                    <Border Style="{StaticResource SettingsCardStyle}">
-                        <StackPanel>
-                            <Grid Margin="0,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <TextBlock Text="主题" Style="{StaticResource RowTitleStyle}" />
-                                    <TextBlock Text="浅色为默认；切换立即生效，下次启动保持"
-                                               Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
-                                </StackPanel>
-                                <Button Grid.Column="1" Style="{StaticResource AppButtonStyle}"
-                                        Click="ThemeToggle_Click" VerticalAlignment="Center">
-                                    <TextBlock x:Name="ThemeToggleText" FontSize="13" />
-                                </Button>
-                            </Grid>
-                            <Border Style="{StaticResource RowDividerStyle}" />
-                            <Grid Margin="0,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <TextBlock Text="窗口背景" Style="{StaticResource RowTitleStyle}" />
-                                    <TextBlock Text="Mica / 亚克力 / 纯色，切换立即生效；系统不支持时自动回退"
-                                               Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Button x:Name="BackdropMicaBtn" Tag="Mica" Content="云母" Click="BackdropButton_Click"
-                                            Style="{StaticResource AppButtonStyle}" MinHeight="32" Padding="12,4" FontSize="13" />
-                                    <Button x:Name="BackdropAcrylicBtn" Tag="Acrylic" Content="亚克力" Click="BackdropButton_Click"
-                                            Style="{StaticResource AppButtonStyle}" MinHeight="32" Padding="12,4" FontSize="13"
-                                            Margin="6,0,0,0" />
-                                    <Button x:Name="BackdropSolidBtn" Tag="Solid" Content="纯色" Click="BackdropButton_Click"
-                                            Style="{StaticResource AppButtonStyle}" MinHeight="32" Padding="12,4" FontSize="13"
-                                            Margin="6,0,0,0" />
-                                </StackPanel>
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
+                <TextBlock
+                    Margin="10"
+                    FontSize="14"
+                    FontWeight="SemiBold"
+                    Text="外观" />
+                <Grid Margin="0,0,0,20" Background="Transparent">
+                    <Border
+                        Padding="{StaticResource ExpanderPadding}"
+                        Background="{DynamicResource ExpanderHeaderBackground}"
+                        BorderBrush="{DynamicResource ExpanderHeaderBorderBrush}"
+                        BorderThickness="{StaticResource ExpanderBorderThemeThickness}"
+                        CornerRadius="{DynamicResource ControlCornerRadius}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
 
-                <!-- 托盘与启动 -->
-                <StackPanel Margin="0,0,0,18">
-                    <StackPanel Orientation="Horizontal" Margin="2,0,0,8">
-                        <Border Width="3" Height="14" CornerRadius="1.5" VerticalAlignment="Center"
-                                Background="{DynamicResource Accent}" />
-                        <TextBlock Text="托盘与启动" Style="{StaticResource SectionTitleStyle}" Margin="8,0,0,0" />
-                    </StackPanel>
-                    <Border Style="{StaticResource SettingsCardStyle}">
-                        <StackPanel>
-                            <Grid Margin="0,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <TextBlock Text="开机自动启动" Style="{StaticResource RowTitleStyle}" />
-                                    <TextBlock Text="写入当前用户启动项（HKCU Run），开机静默启动常驻程序，不弹任何窗口"
-                                               Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
-                                </StackPanel>
-                                <ToggleButton Grid.Column="1" x:Name="AutostartToggle"
-                                              Style="{StaticResource SwitchStyle}"
-                                              Click="AutostartToggle_Click" VerticalAlignment="Center" />
-                            </Grid>
-                        </StackPanel>
+                            <TextBlock
+                                Grid.Column="0"
+                                Margin="10,5,10,5"
+                                VerticalAlignment="Center"
+                                FontFamily="{StaticResource SymbolThemeFontFamily}"
+                                FontSize="20"
+                                Text="&#xE790;" />
+
+                            <StackPanel Grid.Column="1" Margin="12" Orientation="Vertical">
+                                <TextBlock FontSize="14" Text="应用主题" />
+                                <TextBlock
+                                    Opacity="{DynamicResource DeemphasizedTextOpacity}"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Text="选择浅色、深色或跟随系统设置" />
+                            </StackPanel>
+
+                            <ComboBox
+                                x:Name="ThemeModeBox"
+                                Grid.Column="2"
+                                MinWidth="200"
+                                Margin="10"
+                                AutomationProperties.Name="切换主题"
+                                HorizontalAlignment="Right"
+                                SelectionChanged="ThemeMode_SelectionChanged">
+                                <ComboBoxItem Content="浅色" />
+                                <ComboBoxItem Content="深色" />
+                                <ComboBoxItem Content="跟随系统" />
+                            </ComboBox>
+                        </Grid>
                     </Border>
-                </StackPanel>
+                </Grid>
+
+                <!-- 通知 -->
+                <TextBlock
+                    Margin="10"
+                    FontSize="14"
+                    FontWeight="SemiBold"
+                    Text="通知" />
+                <Grid Margin="0,0,0,20" Background="Transparent">
+                    <Border
+                        Padding="{StaticResource ExpanderPadding}"
+                        Background="{DynamicResource ExpanderHeaderBackground}"
+                        BorderBrush="{DynamicResource ExpanderHeaderBorderBrush}"
+                        BorderThickness="{StaticResource ExpanderBorderThemeThickness}"
+                        CornerRadius="{DynamicResource ControlCornerRadius}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock
+                                Grid.Column="0"
+                                Margin="10,5,10,5"
+                                VerticalAlignment="Center"
+                                FontFamily="{StaticResource SymbolThemeFontFamily}"
+                                FontSize="20"
+                                Text="&#xE718;" />
+
+                            <StackPanel Grid.Column="1" Margin="12" Orientation="Vertical">
+                                <TextBlock FontSize="14" Text="托盘气泡通知" />
+                                <TextBlock
+                                    Opacity="{DynamicResource DeemphasizedTextOpacity}"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Text="清理结果与设备提醒的气泡提示" />
+                            </StackPanel>
+
+                            <CheckBox
+                                x:Name="NotifyToggle"
+                                Grid.Column="2"
+                                Margin="10"
+                                VerticalAlignment="Center"
+                                Checked="Notify_Changed"
+                                Unchecked="Notify_Changed" />
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- 启动 -->
+                <TextBlock
+                    Margin="10"
+                    FontSize="14"
+                    FontWeight="SemiBold"
+                    Text="启动" />
+                <Grid Margin="0,0,0,20" Background="Transparent">
+                    <Border
+                        Padding="{StaticResource ExpanderPadding}"
+                        Background="{DynamicResource ExpanderHeaderBackground}"
+                        BorderBrush="{DynamicResource ExpanderHeaderBorderBrush}"
+                        BorderThickness="{StaticResource ExpanderBorderThemeThickness}"
+                        CornerRadius="{DynamicResource ControlCornerRadius}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock
+                                Grid.Column="0"
+                                Margin="10,5,10,5"
+                                VerticalAlignment="Center"
+                                FontFamily="{StaticResource SymbolThemeFontFamily}"
+                                FontSize="20"
+                                Text="&#xE7E8;" />
+
+                            <StackPanel Grid.Column="1" Margin="12" Orientation="Vertical">
+                                <TextBlock FontSize="14" Text="开机自启动" />
+                                <TextBlock
+                                    Opacity="{DynamicResource DeemphasizedTextOpacity}"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Text="登录 Windows 时自动运行工具坞托盘" />
+                            </StackPanel>
+
+                            <CheckBox
+                                x:Name="AutoStartToggle"
+                                Grid.Column="2"
+                                Margin="10"
+                                VerticalAlignment="Center"
+                                Checked="AutoStart_Changed"
+                                Unchecked="AutoStart_Changed" />
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- 内存清理策略 -->
+                <TextBlock
+                    Margin="10"
+                    FontSize="14"
+                    FontWeight="SemiBold"
+                    Text="内存清理策略" />
+                <Border
+                    Margin="0,0,0,20"
+                    Padding="20,16"
+                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{DynamicResource OverlayCornerRadius}">
+                    <StackPanel>
+                        <Grid Margin="0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="占用超过阈值时清理" />
+                                <TextBlock
+                                    Margin="0,2,0,0"
+                                    Opacity="{DynamicResource DeemphasizedTextOpacity}"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Text="阈值 %（50-99）" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBox x:Name="ThresholdBox" Width="52" Height="32" Text="90" />
+                                <CheckBox x:Name="ThresholdToggle" Margin="12,0,0,0" Checked="CleanCfg_Changed" Unchecked="CleanCfg_Changed" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+                        <Grid Margin="0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="定时清理" />
+                                <TextBlock
+                                    Margin="0,2,0,0"
+                                    Opacity="{DynamicResource DeemphasizedTextOpacity}"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Text="间隔分钟（5-720）" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBox x:Name="IntervalBox" Width="52" Height="32" Text="30" />
+                                <CheckBox x:Name="IntervalToggle" Margin="12,0,0,0" Checked="CleanCfg_Changed" Unchecked="CleanCfg_Changed" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+                        <Grid Margin="0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="自动清理时包含冻结区" />
+                                <TextBlock
+                                    Margin="0,2,0,0"
+                                    Opacity="{DynamicResource DeemphasizedTextOpacity}"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Text="勾选后自动清理也处理备用列表 / 已修改页面列表" />
+                            </StackPanel>
+                            <CheckBox x:Name="AllowFreezesToggle" Grid.Column="1" Margin="12,0,0,0" Checked="CleanCfg_Changed" Unchecked="CleanCfg_Changed" VerticalAlignment="Center" />
+                        </Grid>
+                        <Grid Margin="0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="清理前确认" />
+                                <TextBlock
+                                    Margin="0,2,0,0"
+                                    Opacity="{DynamicResource DeemphasizedTextOpacity}"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Text="手动清理前列出所选区域并请求确认" />
+                            </StackPanel>
+                            <CheckBox x:Name="ConfirmCleanToggle" Grid.Column="1" Margin="12,0,0,0" Checked="CleanCfg_Changed" Unchecked="CleanCfg_Changed" VerticalAlignment="Center" />
+                        </Grid>
+                        <Grid Margin="0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="免 UAC 提权" />
+                                <TextBlock
+                                    Margin="0,2,0,0"
+                                    Opacity="{DynamicResource DeemphasizedTextOpacity}"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Text="通过计划任务静默执行清理，开启时弹一次 UAC 授权" />
+                            </StackPanel>
+                            <CheckBox x:Name="SkipUacToggle" Grid.Column="1" Margin="12,0,0,0" Click="SkipUac_Click" VerticalAlignment="Center" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
 
                 <!-- 日志 -->
-                <StackPanel Margin="0,0,0,18">
-                    <StackPanel Orientation="Horizontal" Margin="2,0,0,8">
-                        <Border Width="3" Height="14" CornerRadius="1.5" VerticalAlignment="Center"
-                                Background="{DynamicResource Accent}" />
-                        <TextBlock Text="日志" Style="{StaticResource SectionTitleStyle}" Margin="8,0,0,0" />
+                <TextBlock
+                    Margin="10"
+                    FontSize="14"
+                    FontWeight="SemiBold"
+                    Text="日志" />
+                <Border
+                    Margin="0,0,0,20"
+                    Padding="20,16"
+                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{DynamicResource OverlayCornerRadius}">
+                    <StackPanel>
+                        <Grid Margin="0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="日志文件" />
+                                <TextBlock
+                                    Margin="0,2,0,0"
+                                    Opacity="{DynamicResource DeemphasizedTextOpacity}"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Text="%APPDATA%\ToolDock\logs" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button
+                                    MinWidth="110"
+                                    Margin="8,0,0,0"
+                                    Click="OpenLogDir_Click"
+                                    Content="打开日志目录" />
+                                <Button
+                                    MinWidth="110"
+                                    Margin="8,0,0,0"
+                                    Click="ClearLog_Click"
+                                    Content="清空日志" />
+                            </StackPanel>
+                        </Grid>
+                        <Expander Margin="0,8,0,0" AutomationProperties.Name="查看最近日志">
+                            <Expander.Header>
+                                <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="查看最近日志（托盘 Agent）" />
+                            </Expander.Header>
+                            <StackPanel Margin="0,12,0,0">
+                                <Button
+                                    MinWidth="90"
+                                    HorizontalAlignment="Left"
+                                    Margin="0,0,0,8"
+                                    Click="RefreshLog_Click"
+                                    Content="刷新" />
+                                <TextBox
+                                    x:Name="LogView"
+                                    MaxHeight="320"
+                                    AcceptsReturn="True"
+                                    FontFamily="Consolas"
+                                    IsReadOnly="True"
+                                    Text=""
+                                    TextWrapping="NoWrap"
+                                    VerticalScrollBarVisibility="Auto" />
+                            </StackPanel>
+                        </Expander>
                     </StackPanel>
-                    <Border Style="{StaticResource SettingsCardStyle}">
-                        <StackPanel>
-                            <Grid Margin="0,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <TextBlock Text="打开日志目录" Style="{StaticResource RowTitleStyle}" />
-                                    <TextBlock Text="%APPDATA%\ToolDock\logs（按天滚动）"
-                                               Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Button Style="{StaticResource AppButtonStyle}" Click="OpenLogs_Click" MinHeight="32" Padding="12,4" FontSize="13">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE8B7;" Style="{StaticResource GlyphTextBlockStyle}" FontSize="13"
-                                                       VerticalAlignment="Center" />
-                                            <TextBlock Text="打开目录" Margin="7,0,0,0" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Style="{StaticResource AppButtonStyle}" Click="ClearLogs_Click" MinHeight="32" Padding="12,4" FontSize="13"
-                                            Margin="6,0,0,0">
-                                        <TextBlock Text="清空日志" />
-                                    </Button>
-                                </StackPanel>
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
+                </Border>
 
+                <!-- 关于（Gallery 关于卡片样式） -->
+                <TextBlock
+                    Margin="10"
+                    FontSize="14"
+                    FontWeight="SemiBold"
+                    Text="关于" />
+                <Expander Margin="0,0,0,20" AutomationProperties.Name="关于工具坞">
+                    <Expander.Header>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Image
+                                Grid.Column="0"
+                                Width="20"
+                                Height="20"
+                                Margin="10,5,10,5"
+                                VerticalAlignment="Center"
+                                Source="pack://application:,,,/app.ico" />
+                            <StackPanel Grid.Column="1" Margin="12" Orientation="Vertical">
+                                <TextBlock Text="工具坞 ToolDock" />
+                                <TextBlock Opacity="{DynamicResource DeemphasizedTextOpacity}" Style="{StaticResource CaptionTextBlockStyle}">
+                                    版本 <Run x:Name="VersionRun" Text="0.0.0" />
+                                </TextBlock>
+                            </StackPanel>
+                        </Grid>
+                    </Expander.Header>
+                    <Expander.Content>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Border
+                                Grid.Row="0"
+                                Padding="0,16"
+                                BorderBrush="{DynamicResource ExpanderHeaderBorderBrush}"
+                                BorderThickness="0,0,0,1">
+                                <Grid Margin="48,0,16,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="运行模式" />
+                                    <TextBlock
+                                        x:Name="RunModeText"
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        Opacity="{DynamicResource DeemphasizedTextOpacity}"
+                                        Style="{StaticResource CaptionTextBlockStyle}" />
+                                </Grid>
+                            </Border>
+
+                            <Border
+                                Grid.Row="1"
+                                Padding="0,16"
+                                BorderBrush="{DynamicResource ExpanderHeaderBorderBrush}"
+                                BorderThickness="0,0,0,1">
+                                <StackPanel Margin="48,0,16,0">
+                                    <TextBlock Text="致谢与来源" FontWeight="SemiBold" />
+                                    <TextBlock
+                                        Margin="0,8,0,0"
+                                        Opacity="{DynamicResource DeemphasizedTextOpacity}"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        TextWrapping="Wrap"
+                                        Text="· 内存清理逻辑移植自 Mem Reduct v3.5.2（GPL-3.0）" />
+                                    <TextBlock
+                                        Margin="0,4,0,0"
+                                        Opacity="{DynamicResource DeemphasizedTextOpacity}"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        TextWrapping="Wrap"
+                                        Text="· 界面基于 Microsoft WPF Gallery（MIT）设计语言" />
+                                    <TextBlock
+                                        Margin="0,4,0,0"
+                                        Opacity="{DynamicResource DeemphasizedTextOpacity}"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        TextWrapping="Wrap"
+                                        Text="· 图标来自 iconfont.cn" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Row="2" Padding="0,16">
+                                <TextBlock
+                                    Margin="48,0,16,0"
+                                    Opacity="{DynamicResource DeemphasizedTextOpacity}"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    TextWrapping="Wrap"
+                                    Text="本程序按现状提供，不含任何明示或暗示的担保。" />
+                            </Border>
+                        </Grid>
+                    </Expander.Content>
+                </Expander>
             </StackPanel>
         </ScrollViewer>
     </Grid>
