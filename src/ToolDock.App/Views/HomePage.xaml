@@ -5,8 +5,8 @@
     <!-- 首页 · 方案四「Widget 墙」：每个格子是一个迷你工具，可操作的直接操作。
          仪表盘属性：不限宽、大字号、大留白，随窗口拉伸。 -->
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" FocusVisualStyle="{x:Null}">
-        <!-- 卡片保持组件尺寸：限宽左对齐，不随窗口横向拉伸 -->
-        <Grid Margin="20,16,20,16" MaxWidth="680" HorizontalAlignment="Left" VerticalAlignment="Top">
+        <!-- 两张卡片：宽度平铺等分，高度弹性收缩到内容（同行等高） -->
+        <Grid Margin="20,16,20,16" VerticalAlignment="Top">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="*" />
