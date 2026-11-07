@@ -28,7 +28,7 @@
                         <Border Style="{StaticResource RowDividerStyle}" Margin="0,12" />
 
                         <TextBlock Text="样式与设计参考" Style="{StaticResource CardLabelStyle}" />
-                        <TextBlock Text="VigilWatt（MIT）— 窗口结构与视觉语言&#x0a;Mem Reduct（GPL-3.0）— 内存清理参照&#x0a;PowerToys — 自启动行为参照"
+                        <TextBlock Text="VigilWatt（MIT）— 窗口结构、视觉语言与电量数据层&#x0a;Mem Reduct（GPL-3.0）— 内存清理参照&#x0a;PowerToys — 自启动行为参照"
                                    FontSize="12" Foreground="{DynamicResource Text.Secondary}"
                                    Margin="0,4,0,0" TextWrapping="Wrap" />
                     </StackPanel>

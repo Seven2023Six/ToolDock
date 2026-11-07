@@ -74,6 +74,8 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        // 电量监听（BLE/经典蓝牙/HID 轮询）随即关闭，不留在后台占资源
+        Services.BatteryMonitor.Instance.Dispose();
         AgentLink.Instance.Dispose();
         base.OnExit(e);
     }

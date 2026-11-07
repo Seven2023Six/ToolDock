@@ -3,7 +3,9 @@
   <!-- 按需 GUI：关窗即退，常驻的是 Agent。托盘已迁走，不再需要 WinForms。 -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <Platforms>x64</Platforms>
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -20,6 +22,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ToolDock.Core\ToolDock.Core.csproj" />
+    <!-- VigilWatt 数据层（MIT）：BLE GATT + 经典蓝牙 + 2.4G HID 多品牌插件，复用以求功能对等 -->
+    <ProjectReference Include="..\..\Tools\vigil-watt\src\VigilWatt.Core\VigilWatt.Core.csproj" />
   </ItemGroup>
 
   <!-- 窗口/任务栏图标：WPF Window.Icon 通过 pack URI 加载 -->
