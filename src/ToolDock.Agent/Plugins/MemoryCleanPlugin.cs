@@ -34,6 +34,12 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
     private uint _intervalMinutes = 30;
     private bool _allowStandbyAuto;
     private bool _confirmClean = true;
+    /// <summary>免 UAC 任务操作的串行锁：快速连点开关时安装/卸载不能交错，否则会互相删掉对方的结果。</summary>
+    private readonly object _taskGate = new();
+
+    /// <summary>最新一次免 UAC 请求序号；旧请求发现序号变了就放弃，避免覆盖新状态。</summary>
+    private int _skipUacSeq;
+
     private bool _hotkeyEnabled;
     private uint _hotkeyMods;
     private uint _hotkeyVk;
@@ -190,29 +196,45 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
 
     /// <summary>
     /// 免 UAC 开关（界面直接下发）。返回 true 表示最终状态与请求一致。
-    /// 开启时若任务安装失败（取消 UAC / 创建被拒）就回退，避免出现「开关开着却用不了」的假状态。
+    /// 开启时安装并**实际校验**两个任务都存在；失败（取消 UAC / 创建被拒）就回退，
+    /// 避免出现「开关开着却用不了」的假状态。任务操作全程串行，快速连点不会互相覆盖。
     /// </summary>
     public bool SetSkipUac(bool enabled)
     {
-        _skipUac = enabled;
-        bool ok = true;
-        if (enabled)
+        int seq = Interlocked.Increment(ref _skipUacSeq);
+        lock (_taskGate)
         {
-            ok = InstallTask();
-            if (!ok)
+            // 等待锁期间又来了更新的请求：这一单已经过时，交给后来的那次处理
+            if (seq != Volatile.Read(ref _skipUacSeq))
             {
-                _skipUac = false;
-                _context?.Log.Warn("免 UAC 任务安装失败，已回退开关");
+                return true;
             }
+
+            _skipUac = enabled;
+            bool ok = true;
+            if (enabled)
+            {
+                ok = InstallTask()
+                     && TaskExists(TaskName, "-taskclean-manual")
+                     && TaskExists(TaskNameAuto, "-taskclean-auto");
+                if (!ok)
+                {
+                    _skipUac = false;
+                    _context?.Log.Warn("免 UAC 任务安装或校验失败，已回退开关");
+                }
+            }
+            else
+            {
+                UninstallTask();
+            }
+            Persist();
+            UpdateStatusLine();
+            return ok;
         }
-        else
-        {
-            UninstallTask();
-        }
-        Persist();
-        UpdateStatusLine();
-        return ok;
     }
+
+    /// <summary>当前免 UAC 状态（管道回推界面用）。</summary>
+    public bool SkipUacEnabled => _skipUac;
 
     // ---- 清理入口 ----
 
@@ -477,12 +499,21 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
                 return; // 任务健在且参数正确，不打扰用户
             }
 
+            // 启动阶段绝不弹 UAC：非提权时只记日志，由自动清理的节流提示引导用户重新开关
+            if (!context.Elevation.IsElevated)
+            {
+                context.Log.Warn("免 UAC 任务缺失，已跳过自动重建（避免开机弹 UAC）；请在设置里重新开关「免 UAC 提权」");
+                return;
+            }
+
             InstallTask();
         }
     }
 
     private bool InstallTask()
     {
+        lock (_taskGate)
+        {
         if (_context is not { } context)
         {
             return false;
@@ -530,6 +561,7 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
             context.Notify.Show("内存清理", "免UAC任务创建失败，请重试开关");
         }
         return ok;
+        }
     }
 
     private bool CreateTask(string helper, string task, string mode)
@@ -556,6 +588,8 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
 
     private void UninstallTask()
     {
+        lock (_taskGate)
+        {
         // 两个任务本来就不存在时直接返回：否则会白白拉起提权助手弹一次 UAC
         if (!TaskExists(TaskName, "-taskclean-manual") && !TaskExists(TaskNameAuto, "-taskclean-auto"))
         {
@@ -564,7 +598,12 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
         }
 
         bool direct_ok = DeleteTask(TaskName) && DeleteTask(TaskNameAuto);
-        if (direct_ok || _context is not { } context)
+        if (direct_ok)
+        {
+            _context?.Log.Info("免 UAC 计划任务已删除");
+            return;
+        }
+        if (_context is not { } context)
         {
             return;
         }
@@ -585,6 +624,8 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
                 Thread.Sleep(1000);
             }
             try { File.Delete(result_file); } catch { }
+            context.Log.Info("免 UAC 计划任务删除请求已执行（经提权助手）");
+        }
         }
     }
 

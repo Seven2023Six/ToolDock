@@ -237,12 +237,10 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                         _ = Task.Run(() =>
                         {
                             bool ok = memclean?.SetSkipUac(message.Enable) ?? false;
-                            LogFile.Write($"[pipe] 免UAC开关结果：ok={ok}");
-                            if (!ok)
-                            {
-                                // 安装失败已回退内部状态，把真实状态推回界面，避免开关显示「开着却用不了」
-                                PushState(new PipeMessage { T = "skipUac", Enable = false });
-                            }
+                            bool actual = memclean?.SkipUacEnabled ?? false;
+                            LogFile.Write($"[pipe] 免UAC开关结果：ok={ok} 当前={actual}");
+                            // 无论成败都把真实状态推回界面，避免开关显示「开着却用不了」
+                            PushState(new PipeMessage { T = "skipUac", Enable = actual });
                         });
                         break;
                     case "cleanNow":
