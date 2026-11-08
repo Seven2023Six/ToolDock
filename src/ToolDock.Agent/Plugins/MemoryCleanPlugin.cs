@@ -188,12 +188,22 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
         _context?.Log.Info($"配置已更新（mask=0x{_mask:X} 自动={_autoClean} 阈值={_threshold}% 间隔={_intervalMinutes}分 免UAC={_skipUac} 自动含冻结区={_allowStandbyAuto} 清理确认={_confirmClean}）");
     }
 
-    public void SetSkipUac(bool enabled)
+    /// <summary>
+    /// 免 UAC 开关（界面直接下发）。返回 true 表示最终状态与请求一致。
+    /// 开启时若任务安装失败（取消 UAC / 创建被拒）就回退，避免出现「开关开着却用不了」的假状态。
+    /// </summary>
+    public bool SetSkipUac(bool enabled)
     {
         _skipUac = enabled;
+        bool ok = true;
         if (enabled)
         {
-            InstallTask();
+            ok = InstallTask();
+            if (!ok)
+            {
+                _skipUac = false;
+                _context?.Log.Warn("免 UAC 任务安装失败，已回退开关");
+            }
         }
         else
         {
@@ -201,6 +211,7 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
         }
         Persist();
         UpdateStatusLine();
+        return ok;
     }
 
     // ---- 清理入口 ----
@@ -470,18 +481,18 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
         }
     }
 
-    private void InstallTask()
+    private bool InstallTask()
     {
         if (_context is not { } context)
         {
-            return;
+            return false;
         }
         string? helper = GetHelperPath();
         if (helper is null)
         {
             context.Log.Warn("无法安装免 UAC 任务：找不到提权助手");
             context.Notify.Show("内存清理", "找不到提权助手，免UAC不可用");
-            return;
+            return false;
         }
 
         bool ok;
@@ -499,7 +510,7 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
             {
                 context.Notify.Show("内存清理", "免UAC设置被取消（未提权）");
                 context.Log.Info("免 UAC 任务安装被用户取消");
-                return;
+                return false;
             }
             for (int i = 0; i < 35 && !File.Exists(result_file); i++)
             {
@@ -518,6 +529,7 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
             context.Log.Warn("免 UAC 计划任务安装失败：提权助手创建任务未成功");
             context.Notify.Show("内存清理", "免UAC任务创建失败，请重试开关");
         }
+        return ok;
     }
 
     private bool CreateTask(string helper, string task, string mode)
@@ -544,6 +556,13 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
 
     private void UninstallTask()
     {
+        // 两个任务本来就不存在时直接返回：否则会白白拉起提权助手弹一次 UAC
+        if (!TaskExists(TaskName, "-taskclean-manual") && !TaskExists(TaskNameAuto, "-taskclean-auto"))
+        {
+            _context?.Log.Info("免 UAC 任务本就不存在，跳过卸载");
+            return;
+        }
+
         bool direct_ok = DeleteTask(TaskName) && DeleteTask(TaskNameAuto);
         if (direct_ok || _context is not { } context)
         {

@@ -33,6 +33,9 @@ internal sealed class AgentLink : IDisposable
     public uint CurrentThreshold { get; set; } = 90;
     public uint CurrentIntervalM { get; set; } = 30;
     public bool CurrentSkipUac { get; set; }
+
+    /// <summary>Agent 纠正免 UAC 状态时触发（值 = 真实状态）。</summary>
+    public static event Action<bool>? SkipUacChanged;
     public bool CurrentAllowFreezes { get; set; }
     public bool CurrentConfirmClean { get; set; } = true;
     public bool CurrentBubbleResults { get; set; } = true;
@@ -443,6 +446,12 @@ internal sealed class AgentLink : IDisposable
                 {
                     Application.Current?.Dispatcher.Invoke(() =>
                         (Application.Current.MainWindow as MainWindow)?.BringToFront());
+                }
+                if (message.T == "skipUac")
+                {
+                    // Agent 侧安装失败回退时推回真实状态，界面开关跟着复位
+                    CurrentSkipUac = message.Enable;
+                    SkipUacChanged?.Invoke(message.Enable);
                 }
             }
             Connected = false;

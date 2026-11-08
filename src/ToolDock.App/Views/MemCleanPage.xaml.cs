@@ -33,7 +33,27 @@ public partial class MemCleanPage : UserControl
             _syncing = false;
             ApplyToolEnabledState(ToolEnabledToggle.IsChecked == true, notify: false);
         };
-        Unloaded += (_, _) => _timer.Stop();
+        Unloaded += (_, _) =>
+        {
+            _timer.Stop();
+            AgentLink.SkipUacChanged -= OnSkipUacChanged;
+        };
+        AgentLink.SkipUacChanged += OnSkipUacChanged;
+    }
+
+    /// <summary>Agent 回退免 UAC（安装被取消/失败）时把开关同步回真实状态。</summary>
+    private void OnSkipUacChanged(bool enabled)
+    {
+        if (!IsLoaded)
+        {
+            return;
+        }
+        Dispatcher.Invoke(() =>
+        {
+            _syncing = true;
+            SkipUacToggle.IsChecked = enabled;
+            _syncing = false;
+        });
     }
 
     private void RefreshMemory()

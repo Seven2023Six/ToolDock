@@ -40,6 +40,28 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
         }
     }
 
+    /// <summary>把状态推送回界面进程（界面被动更新，不做请求/应答）。</summary>
+    private void PushState(PipeMessage message)
+    {
+        NamedPipeServerStream? app;
+        lock (_gate)
+        {
+            app = _appConnection;
+        }
+        if (app is not { IsConnected: true })
+        {
+            return;
+        }
+        try
+        {
+            PipeFrame.WriteAsync(app, message, CancellationToken.None).Wait(800);
+        }
+        catch
+        {
+            // 界面已退出/管道已断，无需处理
+        }
+    }
+
     /// <summary>托盘「退出」时通知界面进程一起收尾（界面关窗只是隐藏，需要这条消息才会真退出）。</summary>
     public void NotifyShutdown()
     {
@@ -208,6 +230,20 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                     case "setCleanCfg":
                         memclean?.ApplyConfig(message.Mask, message.AutoClean, message.Threshold, message.IntervalM, message.SkipUac, message.AllowFreezes, message.ConfirmClean, message.BubbleResults, message.LogResults);
                         LogFile.Write($"[pipe] 清理配置已更新：mask=0x{message.Mask:X} 自动={message.AutoClean} 阈值={message.Threshold}% 间隔={message.IntervalM}分 免UAC={message.SkipUac} 自动含冻结区={message.AllowFreezes} 清理确认={message.ConfirmClean}");
+                        break;
+                    case "setSkipUac":
+                        // 安装/卸载计划任务可能弹一次 UAC 或等待提权助手回传，放到后台避免堵住管道
+                        LogFile.Write($"[pipe] 免UAC开关请求：{message.Enable}");
+                        _ = Task.Run(() =>
+                        {
+                            bool ok = memclean?.SetSkipUac(message.Enable) ?? false;
+                            LogFile.Write($"[pipe] 免UAC开关结果：ok={ok}");
+                            if (!ok)
+                            {
+                                // 安装失败已回退内部状态，把真实状态推回界面，避免开关显示「开着却用不了」
+                                PushState(new PipeMessage { T = "skipUac", Enable = false });
+                            }
+                        });
                         break;
                     case "cleanNow":
                         LogFile.Write($"[pipe] 收到清理请求（confirmed={message.Confirmed}）");
