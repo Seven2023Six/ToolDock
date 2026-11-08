@@ -49,6 +49,7 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
     private bool _enabled = true;
     private DateTime _lastClean = DateTime.UtcNow;
     private DateTime _lastAutoHint = DateTime.MinValue;
+    private DateTime _lastNearLog = DateTime.MinValue;
     private System.Threading.Timer? _autoTimer;
     private readonly object _gate = new();
 
@@ -84,7 +85,8 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
 
         ApplyHotkey();
 
-        _autoTimer = new System.Threading.Timer(_ => AutoTick(), null, TimeSpan.FromSeconds(30), TimeSpan.FromMinutes(1));
+        // 30 秒采样一次：阈值型清理最多延迟半分钟，避免刚好错过瞬时高点
+        _autoTimer = new System.Threading.Timer(_ => AutoTick(), null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(30));
 
         context.Log.Info($"已启动（mask=0x{_mask:X} 自动清理={_autoClean} 阈值={_threshold}% 间隔={_intervalMinutes}分 免UAC={_skipUac} 自动含冻结区={_allowStandbyAuto} 清理确认={_confirmClean}）");
         return Task.CompletedTask;
@@ -264,6 +266,15 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
 
             bool by_threshold = _threshold > 0 && snapshot.LoadPercent >= _threshold;
             bool by_interval = _intervalMinutes > 0 && DateTime.UtcNow - _lastClean >= TimeSpan.FromMinutes(_intervalMinutes);
+
+            // 接近阈值时每 10 分钟留一条记录：下次"没触发"能直接看到系统读到的百分比
+            if (!by_threshold && !by_interval &&
+                snapshot.LoadPercent + 5 >= _threshold &&
+                DateTime.UtcNow - _lastNearLog >= TimeSpan.FromMinutes(10))
+            {
+                _lastNearLog = DateTime.UtcNow;
+                _context?.Log.Info($"自动检查：{snapshot.LoadPercent}% / 阈值 {_threshold}%（未达阈值）");
+            }
 
             if (by_threshold || by_interval)
             {
