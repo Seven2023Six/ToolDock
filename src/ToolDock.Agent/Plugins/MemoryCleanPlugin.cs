@@ -345,7 +345,7 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
                 if (_skipUac && RunScheduledTask(task))
                 {
                     _lastClean = DateTime.UtcNow;
-                    if (!silent)
+                    if (!silent && _bubbleResults)
                     {
                         context.Notify.Show("内存清理", $"自动清理已执行（{source}）");
                     }
@@ -362,11 +362,11 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
                 if (RunScheduledTask(TaskName))
                 {
                     _lastClean = DateTime.UtcNow;
-                    if (!silent)
+                    if (!silent && _bubbleResults)
                     {
                         context.Notify.Show("内存清理", $"清理已执行（{source}）");
                     }
-                    else
+                    else if (silent)
                     {
                         context.Log.Info("静默清理：已抑制气泡提示");
                     }
