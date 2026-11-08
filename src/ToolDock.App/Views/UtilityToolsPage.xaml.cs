@@ -19,9 +19,6 @@ public partial class UtilityToolsPage : UserControl
     private void UninstallTool_Click(object sender, RoutedEventArgs e)
         => Launch("卸载工具", "tools/uninstalltool/UninstallTool.exe", "assets/tools/uninstalltool/UninstallTool.exe");
 
-    private void AltSnap_Click(object sender, RoutedEventArgs e)
-        => Launch("AltSnap", "tools/altsnap/AltSnap.exe", "assets/tools/altsnap/AltSnap.exe");
-
     private static void Launch(string displayName, params string[] relativeCandidates)
     {
         string? exe = FindTool(relativeCandidates);

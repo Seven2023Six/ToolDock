@@ -29,7 +29,7 @@
                 Opacity="0.8"
                 FontSize="13"
                 Foreground="{DynamicResource Text.Secondary}"
-                Text="提示：卸载工具需要管理员权限；AltSnap 常驻托盘，用 Alt+拖动窗口。" />
+                Text="提示：卸载工具需要管理员权限，启动时会请求 UAC。" />
         </Border>
 
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
@@ -43,18 +43,6 @@
                         <StackPanel HorizontalAlignment="Center">
                             <Image Width="40" Height="40" HorizontalAlignment="Center" Source="pack://application:,,,/uninstalltool_icon.png" />
                             <TextBlock Margin="0,10,0,0" HorizontalAlignment="Center" FontSize="13" Text="Uninstall Tool" TextAlignment="Center" TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Button>
-                </Grid>
-                <Grid Margin="4">
-                    <Button
-                        x:Name="AltSnapCard"
-                        AutomationProperties.Name="启动 AltSnap"
-                        Click="AltSnap_Click"
-                        Style="{StaticResource ToolCardButtonStyle}">
-                        <StackPanel HorizontalAlignment="Center">
-                            <Image Width="40" Height="40" HorizontalAlignment="Center" Source="pack://application:,,,/altsnap_icon.png" />
-                            <TextBlock Margin="0,10,0,0" HorizontalAlignment="Center" FontSize="13" Text="AltSnap" TextAlignment="Center" TextWrapping="Wrap" />
                         </StackPanel>
                     </Button>
                 </Grid>

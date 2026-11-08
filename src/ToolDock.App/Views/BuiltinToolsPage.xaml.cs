@@ -21,6 +21,7 @@ public partial class BuiltinToolsPage : UserControl
         var settings = Services.UiSettings.Load();
         ApplyCardState(MemCleanCard, MemCleanBadge, settings.IsToolEnabled("memclean"));
         ApplyCardState(BatteryCard, BatteryBadge, settings.IsToolEnabled("battery"));
+        ApplyCardState(AltSnapCard, AltSnapBadge, settings.IsToolEnabled("altsnap"));
     }
 
     private static void ApplyCardState(Button card, Border badge, bool enabled)
@@ -34,4 +35,7 @@ public partial class BuiltinToolsPage : UserControl
 
     private void Battery_Click(object sender, RoutedEventArgs e)
         => (Window.GetWindow(this) as MainWindow)?.ShowPage("battery");
+
+    private void AltSnap_Click(object sender, RoutedEventArgs e)
+        => (Window.GetWindow(this) as MainWindow)?.ShowPage("altsnap");
 }

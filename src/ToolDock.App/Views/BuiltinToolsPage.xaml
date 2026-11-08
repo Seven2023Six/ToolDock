@@ -76,6 +76,24 @@
                         <TextBlock FontSize="10" Foreground="{DynamicResource Text.Secondary}" Text="已停用" />
                     </Border>
                 </Grid>
+                <!-- AltSnap（窗口 Alt+拖动） -->
+                <Grid Margin="4">
+                    <Button
+                        x:Name="AltSnapCard"
+                        AutomationProperties.Name="打开 AltSnap"
+                        Click="AltSnap_Click"
+                        Style="{StaticResource ToolCardButtonStyle}">
+                        <StackPanel HorizontalAlignment="Center">
+                            <Image Width="40" Height="40" HorizontalAlignment="Center" Source="pack://application:,,,/altsnap_icon.png" />
+                            <TextBlock Margin="0,10,0,0" HorizontalAlignment="Center" FontSize="13" Text="AltSnap" TextAlignment="Center" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Button>
+                    <Border x:Name="AltSnapBadge" Margin="0,6,6,0" Padding="6,1" CornerRadius="4"
+                            HorizontalAlignment="Right" VerticalAlignment="Top" Visibility="Collapsed"
+                            Background="{DynamicResource Nav.Checked}">
+                        <TextBlock FontSize="10" Foreground="{DynamicResource Text.Secondary}" Text="已停用" />
+                    </Border>
+                </Grid>
             </WrapPanel>
         </ScrollViewer>
     </Grid>

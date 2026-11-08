@@ -112,6 +112,7 @@ public partial class MainWindow : Window
                 "battery" => new BatteryPage(),
                 "builtin" => new BuiltinToolsPage(),
                 "utility" => new UtilityToolsPage(),
+                "altsnap" => new AltSnapPage(),
                 "memclean" => new MemCleanPage(),
                 "custom" => new CustomToolsPage(),
                 "settings" => new SettingsPage(),

@@ -75,6 +75,7 @@ public partial class App : Application
             {
                 Services.MemoryPillService.OpenMemCleanPage = () => ShowMainWindow("memclean");
                 Services.MemoryPillService.Instance.Start();
+                Services.AltSnapService.StartIfEnabled();
             }
             catch (Exception exception)
             {
@@ -150,6 +151,7 @@ public partial class App : Application
     {
         // 电量监听（BLE/经典蓝牙/HID 轮询）随即关闭，不留在后台占资源
         try { Services.MemoryPillService.Instance.Stop(); } catch { }
+        try { Services.AltSnapService.Stop(); } catch { }
         Services.BatteryMonitor.Instance.Dispose();
         AgentLink.Instance.Dispose();
         base.OnExit(e);
