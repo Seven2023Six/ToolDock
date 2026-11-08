@@ -13,3 +13,4 @@ Tools/
 # 实用工具内置的第三方程序随仓库分发（与上面的参照项目不同，这里必须入库）
 !assets/tools/
 !assets/tools/**
+dist/
