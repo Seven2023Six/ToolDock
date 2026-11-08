@@ -37,12 +37,17 @@
     <Resource Include="..\..\assets\mem_icon.png" Link="mem_icon.png" />
     <Resource Include="..\..\assets\battery_icon.png" Link="battery_icon.png" />
     <Resource Include="..\..\assets\uninstalltool_icon.png" Link="uninstalltool_icon.png" />
+    <Resource Include="..\..\assets\altsnap_icon.png" Link="altsnap_icon.png" />
   </ItemGroup>
 
   <!-- 实用工具：第三方程序随包分发到 tools\<名称>\，页面按 AppContext.BaseDirectory 定位 -->
   <ItemGroup>
     <None Include="..\..\assets\tools\uninstalltool\**\*"
           Link="tools\uninstalltool\%(RecursiveDir)%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest"
+          Visible="false" />
+    <None Include="..\..\assets\tools\altsnap\**\*"
+          Link="tools\altsnap\%(RecursiveDir)%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest"
           Visible="false" />
   </ItemGroup>

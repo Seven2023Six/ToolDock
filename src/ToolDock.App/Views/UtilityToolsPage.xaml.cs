@@ -16,15 +16,18 @@ public partial class UtilityToolsPage : UserControl
         InitializeComponent();
     }
 
-    private void UninstallTool_Click(object sender, RoutedEventArgs e) => LaunchUninstallTool();
+    private void UninstallTool_Click(object sender, RoutedEventArgs e)
+        => Launch("卸载工具", "tools/uninstalltool/UninstallTool.exe", "assets/tools/uninstalltool/UninstallTool.exe");
 
-    private static void LaunchUninstallTool()
+    private void AltSnap_Click(object sender, RoutedEventArgs e)
+        => Launch("AltSnap", "tools/altsnap/AltSnap.exe", "assets/tools/altsnap/AltSnap.exe");
+
+    private static void Launch(string displayName, params string[] relativeCandidates)
     {
-        string? exe = FindTool("tools/uninstalltool/UninstallTool.exe",
-            "assets/tools/uninstalltool/UninstallTool.exe");
+        string? exe = FindTool(relativeCandidates);
         if (exe is null)
         {
-            MessageBox.Show("找不到内置的卸载工具，请重新安装或重新发布工具箱。", "工具坞 ToolDock",
+            MessageBox.Show($"找不到内置的{displayName}，请重新安装或重新发布工具箱。", "工具坞 ToolDock",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -39,7 +42,7 @@ public partial class UtilityToolsPage : UserControl
         }
         catch (Exception exception)
         {
-            MessageBox.Show($"启动卸载工具失败：{exception.Message}", "工具坞 ToolDock",
+            MessageBox.Show($"启动{displayName}失败：{exception.Message}", "工具坞 ToolDock",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
