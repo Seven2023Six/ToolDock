@@ -164,7 +164,9 @@ internal sealed class ElevationService : IElevationService
         }
         catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException)
         {
-            // 用户在 UAC 弹窗点取消 / 启动失败
+            // 用户在 UAC 弹窗点取消 / 安全软件拦截 / 启动失败：记录真实错误码便于诊断
+            int code = exception is System.ComponentModel.Win32Exception win32 ? win32.NativeErrorCode : 0;
+            LogFile.Write($"[elevation] 提权启动失败：{exception.GetType().Name} code={code} {exception.Message}");
             return Task.FromResult(false);
         }
     }

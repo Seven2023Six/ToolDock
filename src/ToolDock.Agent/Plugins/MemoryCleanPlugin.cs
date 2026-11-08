@@ -209,8 +209,8 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
             if (enabled)
             {
                 ok = InstallTask()
-                     && TaskExists(TaskName, "-taskclean-manual")
-                     && TaskExists(TaskNameAuto, "-taskclean-auto");
+                     && TaskExists(TaskName, ElevatedOperations.ManualArg)
+                     && TaskExists(TaskNameAuto, ElevatedOperations.AutoArg);
                 if (!ok)
                 {
                     _skipUac = false;
@@ -341,12 +341,12 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
             string helper = GetHelperPath();
             if (helper is null)
             {
-                context.Notify.Show("内存清理", "找不到提权助手程序");
+                context.Notify.Show("内存清理", "找不到提权程序（ToolDock.Agent.exe）");
                 return;
             }
 
             string result_file = Path.Combine(Path.GetTempPath(), $"tooldock_clean_{Guid.NewGuid():N}.txt");
-            bool started = context.Elevation.RunElevatedAsync(helper, $"-clean {mask} -out \"{result_file}\"").GetAwaiter().GetResult();
+            bool started = context.Elevation.RunElevatedAsync(helper, $"--clean {mask} -out \"{result_file}\"").GetAwaiter().GetResult();
 
             if (!started)
             {
@@ -446,6 +446,14 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
 
     private string? GetHelperPath()
     {
+        // 优先用主程序自身提权（E:\..\ToolDock.Agent.exe --xxx）：独立未签名 helper
+        // 容易被安全软件拦截/锁文件。helper 仅作旧布局兜底。
+        string? self = Environment.ProcessPath;
+        if (!string.IsNullOrEmpty(self) && File.Exists(self))
+        {
+            return self;
+        }
+
         string base_dir = AppContext.BaseDirectory;
         string[] candidates =
         {
@@ -488,7 +496,7 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
                 return;
             }
 
-            if (TaskExists(TaskName, "-taskclean-manual") && TaskExists(TaskNameAuto, "-taskclean-auto"))
+            if (TaskExists(TaskName, ElevatedOperations.ManualArg) && TaskExists(TaskNameAuto, ElevatedOperations.AutoArg))
             {
                 return; // 任务健在且参数正确，不打扰用户
             }
@@ -523,18 +531,19 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
         bool ok;
         if (context.Elevation.IsElevated)
         {
-            ok = CreateTask(helper, TaskName, "-taskclean-manual") && CreateTask(helper, TaskNameAuto, "-taskclean-auto");
+            ok = CreateTask(helper, TaskName, ElevatedOperations.ManualArg)
+                 && CreateTask(helper, TaskNameAuto, ElevatedOperations.AutoArg);
         }
         else
         {
             // 经提权助手创建（RunLevel=Highest 必须提权）：开关切换时弹一次 UAC，属用户主动操作
             string result_file = Path.Combine(Path.GetTempPath(), $"tooldock_task_{Guid.NewGuid():N}.txt");
             bool started = context.Elevation.RunElevatedAsync(helper,
-                $"-install-task -out \"{result_file}\"").GetAwaiter().GetResult();
+                $"--install-task -out \"{result_file}\"").GetAwaiter().GetResult();
             if (!started)
             {
-                context.Notify.Show("内存清理", "免UAC设置被取消（未提权）");
-                context.Log.Info("免 UAC 任务安装被用户取消");
+                context.Notify.Show("内存清理", "提权被取消或被安全软件拦截：请允许 ToolDock 提权，或在安全软件中信任 ToolDock 目录后重试");
+                context.Log.Warn("免 UAC 任务安装未启动（取消或安全软件拦截）");
                 return false;
             }
             for (int i = 0; i < 35 && !File.Exists(result_file); i++)
@@ -585,7 +594,7 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
         lock (_taskGate)
         {
         // 两个任务本来就不存在时直接返回：否则会白白拉起提权助手弹一次 UAC
-        if (!TaskExists(TaskName, "-taskclean-manual") && !TaskExists(TaskNameAuto, "-taskclean-auto"))
+        if (!TaskExists(TaskName, ElevatedOperations.ManualArg) && !TaskExists(TaskNameAuto, ElevatedOperations.AutoArg))
         {
             _context?.Log.Info("免 UAC 任务本就不存在，跳过卸载");
             return;
@@ -610,7 +619,7 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
             return;
         }
         string result_file = Path.Combine(Path.GetTempPath(), $"tooldock_task_{Guid.NewGuid():N}.txt");
-        bool started = context.Elevation.RunElevatedAsync(helper, $"-uninstall-task -out \"{result_file}\"").GetAwaiter().GetResult();
+        bool started = context.Elevation.RunElevatedAsync(helper, $"--uninstall-task -out \"{result_file}\"").GetAwaiter().GetResult();
         if (started)
         {
             for (int i = 0; i < 35 && !File.Exists(result_file); i++)
@@ -658,7 +667,11 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
             }
             string output = process.StandardOutput.ReadToEnd();
             process.WaitForExit(10000);
-            return process.ExitCode == 0 && output.Contains(expected_arg, StringComparison.Ordinal);
+            // 参数与目标程序都要匹配：旧版指向 ElevatedHelper.exe 的任务视为过期，需要重建
+            string exeName = Path.GetFileName(Environment.ProcessPath ?? "ToolDock.Agent.exe");
+            return process.ExitCode == 0
+                   && output.Contains(expected_arg, StringComparison.Ordinal)
+                   && output.Contains(exeName, StringComparison.OrdinalIgnoreCase);
         }
         catch
         {

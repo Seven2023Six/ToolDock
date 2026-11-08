@@ -25,6 +25,37 @@ internal static class Program
 
     private static int Run(string[] args)
     {
+        // 提权模式：以管理员身份再跑一遍本进程。必须在单实例检查之前——
+        // 常驻 Agent 占着互斥量，提权副本不能因为"已有实例"直接退出。
+        if (args.Length > 0)
+        {
+            switch (args[0].ToLowerInvariant())
+            {
+                case "--install-task":
+                    return ElevatedOperations.InstallTasks(args);
+                case "--uninstall-task":
+                    return ElevatedOperations.UninstallTasks(args);
+                case "--taskclean-manual":
+                    return ElevatedOperations.CleanFromPlugin(auto: false);
+                case "--taskclean-auto":
+                    return ElevatedOperations.CleanFromPlugin(auto: true);
+                case "--clean":
+                {
+                    if (!CleanupCore.IsElevated())
+                    {
+                        LogFile.Write("[agent] --clean 需要管理员权限");
+                        return 2;
+                    }
+                    ulong mask = CleanupCore.MaskDefault;
+                    if (args.Length > 1 && ulong.TryParse(args[1], out var parsed))
+                    {
+                        mask = parsed;
+                    }
+                    return ElevatedOperations.CleanWithMask(mask, ElevatedOperations.GetArg(args, "-out"));
+                }
+            }
+        }
+
         // 命令行清理（对齐 Mem Reduct /clean）：/clean [掩码] —— 需要管理员权限，不启动托盘
         int cleanIndex = Array.FindIndex(args, a =>
             a.Equals("/clean", StringComparison.OrdinalIgnoreCase) ||
