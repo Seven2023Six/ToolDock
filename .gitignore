@@ -6,9 +6,11 @@ publish/
 *.user
 *.suo
 
-# 三个外部参照项目（vigil-watt / memreduct / ViVe）自带各自 git 仓库，
-# 暂不纳入本仓库版本管理；如需纳入请删除下面这行
-Tools/
+# 外部参照项目：memreduct / ViVe / routine 只作参考，不入库；
+# vigil-watt 通过子模块引入（见 .gitmodules）
+Tools/memreduct/
+Tools/ViVe/
+Tools/routine/
 
 # 内置的第三方程序：Uninstall Tool 为商业软件，不随仓库分发；
 # 本地需要时自行放到 assets/tools/uninstalltool（程序会自动加载）

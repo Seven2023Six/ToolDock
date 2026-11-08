@@ -65,8 +65,10 @@ VigilWatt.Core (MIT)     外设电量数据层（BLE/经典蓝牙/2.4G HID 插�
 ## 构建
 
 ```bash
-# 依赖：外设电量数据层（MIT）。放到 Tools/vigil-watt 或用自己的 fork
-git clone git@github.com:evren-oct/vigil-watt.git Tools/vigil-watt
+# 依赖：外设电量数据层（MIT）以子模块引入
+git clone --recursive https://github.com/Seven2023Six/ToolDock.git
+# 已 clone 过但没有子模块时：
+git submodule update --init --recursive
 
 # 1) 常驻 Agent（AOT）
 dotnet publish src/ToolDock.Agent/ToolDock.Agent.csproj -c Release -r win-x64 -o publish
