@@ -36,6 +36,9 @@ internal sealed class AgentLink : IDisposable
 
     /// <summary>Agent 纠正免 UAC 状态时触发（值 = 真实状态）。</summary>
     public static event Action<bool>? SkipUacChanged;
+
+    /// <summary>托盘再次请求打开界面。后台贴片模式下主窗还没创建，由 App 负责按需创建。</summary>
+    public static event Action? ActivateRequested;
     public bool CurrentAllowFreezes { get; set; }
     public bool CurrentConfirmClean { get; set; } = true;
     public bool CurrentBubbleResults { get; set; } = true;
@@ -446,7 +449,16 @@ internal sealed class AgentLink : IDisposable
                 if (message.T == "activate")
                 {
                     Application.Current?.Dispatcher.BeginInvoke(() =>
-                        (Application.Current.MainWindow as MainWindow)?.BringToFront());
+                    {
+                        if (ActivateRequested is not null)
+                        {
+                            ActivateRequested();
+                        }
+                        else
+                        {
+                            (Application.Current.MainWindow as MainWindow)?.BringToFront();
+                        }
+                    });
                 }
                 if (message.T == "skipUac")
                 {

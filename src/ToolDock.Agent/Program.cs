@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using ToolDock.Agent;
 using ToolDock.Core;
 
@@ -93,7 +94,7 @@ internal static class Program
         }
 
         _tray = new TrayIconController();
-        _tray.OpenRequested += LaunchApp;
+        _tray.OpenRequested += () => LaunchApp();
         _tray.ExitRequested += () => _tray.RequestExit();
         _tray.Initialize();
 
@@ -107,6 +108,17 @@ internal static class Program
 
         LogFile.Write("[agent] 启动完成");
         MemoryTrim.TrimCurrent(); // 启动即回收一次工作集
+
+        // 开机自启时，贴片宿主（WPF 后台进程）需要主动拉起：否则要等用户点托盘才出现贴片
+        if (BackgroundPillsNeeded() && !AppAlreadyRunning())
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(2500);
+                LaunchApp(background: true);
+            });
+        }
+
         _tray.RunMessageLoop(); // 阻塞主线程，直到托盘菜单"退出"
 
         pipeServer.NotifyShutdown();
@@ -126,7 +138,7 @@ internal static class Program
     }
 
     /// <summary>按需拉起 WPF 界面（App 关窗即退，所以每次点托盘都可能是冷启动）。</summary>
-    private static void LaunchApp()
+    private static void LaunchApp(bool background = false)
     {
         try
         {
@@ -147,11 +159,83 @@ internal static class Program
                 LogFile.Write("[agent] 启动界面失败：未找到 ToolDock.exe");
                 return;
             }
-            Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = true });
+            var startInfo = new ProcessStartInfo(exePath) { UseShellExecute = true };
+            if (background)
+            {
+                startInfo.Arguments = "--background";
+            }
+            Process.Start(startInfo);
         }
         catch (Exception exception)
         {
             LogFile.Write($"[agent] 启动界面失败：{exception.Message}");
+        }
+    }
+
+    /// <summary>界面进程是否已在跑（含后台贴片宿主），避免 Agent 重启时重复拉起并弹窗。</summary>
+    private static bool AppAlreadyRunning()
+    {
+        try
+        {
+            return Process.GetProcessesByName("ToolDock").Length > 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>按 UiSettings/电量设置判断是否至少有一个任务栏贴片需要宿主进程。</summary>
+    private static bool BackgroundPillsNeeded()
+    {
+        try
+        {
+            string dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ToolDock");
+            bool memoryPill = true, memoryTool = true, batteryTool = true;
+
+            string uiPath = Path.Combine(dir, "ui-settings.json");
+            if (File.Exists(uiPath))
+            {
+                using var doc = JsonDocument.Parse(File.ReadAllText(uiPath));
+                var root = doc.RootElement;
+                if (root.TryGetProperty("MemoryPillEnabled", out var mp))
+                {
+                    memoryPill = mp.GetBoolean();
+                }
+                if (root.TryGetProperty("ToolEnabled", out var tools))
+                {
+                    if (tools.TryGetProperty("memclean", out var m))
+                    {
+                        memoryTool = m.GetBoolean();
+                    }
+                    if (tools.TryGetProperty("battery", out var b))
+                    {
+                        batteryTool = b.GetBoolean();
+                    }
+                }
+            }
+
+            bool batteryPill = true;
+            string batteryPath = Path.Combine(dir, "battery-settings.json");
+            if (File.Exists(batteryPath))
+            {
+                using var doc = JsonDocument.Parse(File.ReadAllText(batteryPath));
+                if (doc.RootElement.TryGetProperty("TaskbarBatteryEnabled", out var be))
+                {
+                    batteryPill = be.GetBoolean();
+                }
+            }
+            else
+            {
+                batteryPill = false;
+            }
+
+            return (memoryPill && memoryTool) || (batteryPill && batteryTool);
+        }
+        catch
+        {
+            return true; // 读不到设置就按需要处理，贴片服务自己还有一层开关
         }
     }
 }

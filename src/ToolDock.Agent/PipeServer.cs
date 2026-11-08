@@ -285,7 +285,8 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                         LogFile.Write($"[pipe] 内存清理工具启用状态：{message.Enable}");
                         break;
                     case "setAutoStart":
-                        AutoStartManager.Apply(message.Enable, agentExePath);
+                        // 用户在应用里关/开：开启时顺带清掉任务管理器的禁用标记
+                        AutoStartManager.Apply(message.Enable, agentExePath, clearStartupApproval: message.Enable);
                         settings.AutoStart = message.Enable;
                         settings.Save();
                         LogFile.Write($"[pipe] 开机自启已更新：{message.Enable}");

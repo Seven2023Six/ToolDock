@@ -20,6 +20,14 @@ public partial class App : Application
     {
         try
         {
+            // 贴片宿主模式：由 Agent 开机拉起，不显示主窗，只跑任务栏贴片与电量监听
+            bool background = e.Args.Any(arg =>
+                arg.Equals("--background", StringComparison.OrdinalIgnoreCase));
+            if (background)
+            {
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            }
+
             base.OnStartup(e);
 
             DispatcherUnhandledException += (_, args) =>
@@ -65,23 +73,20 @@ public partial class App : Application
             // 任务栏内存贴片：点击即清理；右键可打开内存清理页
             try
             {
-                Services.MemoryPillService.OpenMemCleanPage = () =>
-                {
-                    var window = Current?.MainWindow;
-                    if (window is null)
-                    {
-                        return;
-                    }
-                    window.Show();
-                    window.WindowState = WindowState.Normal;
-                    window.Activate();
-                    (window as MainWindow)?.ShowPage("memclean");
-                };
+                Services.MemoryPillService.OpenMemCleanPage = () => ShowMainWindow("memclean");
                 Services.MemoryPillService.Instance.Start();
             }
             catch (Exception exception)
             {
                 StartupLog("app: 内存贴片启动失败 " + exception.Message);
+            }
+
+            AgentLink.ActivateRequested += () => ShowMainWindow();
+
+            if (background)
+            {
+                StartupLog("app: 后台贴片模式（不显示主窗）");
+                return;
             }
 
             var mainWindow = new MainWindow();
@@ -94,6 +99,34 @@ public partial class App : Application
         {
             StartupLog("app: 启动失败 " + exception);
             throw;
+        }
+    }
+
+    /// <summary>按需创建并显示主窗（后台贴片模式下第一次点托盘走这里）。</summary>
+    private static void ShowMainWindow(string? page = null)
+    {
+        var app = Current;
+        if (app is null)
+        {
+            return;
+        }
+        if (app.MainWindow is MainWindow existing)
+        {
+            existing.Show();
+            existing.WindowState = WindowState.Normal;
+            existing.Activate();
+            if (page is not null)
+            {
+                existing.ShowPage(page);
+            }
+            return;
+        }
+        var window = new MainWindow();
+        app.MainWindow = window;
+        window.Show();
+        if (page is not null)
+        {
+            window.ShowPage(page);
         }
     }
 
