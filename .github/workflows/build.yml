@@ -1,0 +1,62 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows-x64:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish Agent (NativeAOT)
+        run: dotnet publish src/ToolDock.Agent/ToolDock.Agent.csproj -c Release -r win-x64 -o publish
+
+      - name: Publish App (WPF)
+        run: dotnet publish src/ToolDock.App/ToolDock.App.csproj -c Release -o publish/app
+
+      - name: Package zip
+        run: python scripts/package-win-x64.py
+        env:
+          TOOLDOCK_VERSION: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ToolDock-win-x64
+          path: dist/*.zip
+          if-no-files-found: error
+
+      - name: Release (tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true
+
+      - name: Release (rolling latest)
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest build
+          body: |
+            自动构建：${{ github.sha }}
+            解压后运行 `ToolDock.Agent.exe`；界面需要 .NET 8 Desktop Runtime。
+          files: dist/*.zip
+          make_latest: true

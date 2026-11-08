@@ -8,7 +8,7 @@ import os
 import sys
 import zipfile
 
-VERSION = "0.2.0"
+VERSION = os.environ.get("TOOLDOCK_VERSION") or "0.2.0"
 PACKAGE_NAME = "ToolDock"
 SRC = "publish"
 DIST = "dist"

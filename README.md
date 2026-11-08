@@ -1,5 +1,7 @@
 # ToolDock 工具坞
 
+[![build](https://github.com/Seven2023Six/ToolDock/actions/workflows/build.yml/badge.svg)](https://github.com/Seven2023Six/ToolDock/actions/workflows/build.yml)
+
 Windows 托盘**工具坞**：常驻 Agent + 按需启动的 WPF 界面，把系统工具和第三方程序插件式收进同一个入口。
 
 - 常驻进程为 **NativeAOT** 编译的 Agent（托盘 / 命名管道 / 设置唯一写者），空闲内存约几 MB
