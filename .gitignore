@@ -10,7 +10,10 @@ publish/
 # 暂不纳入本仓库版本管理；如需纳入请删除下面这行
 Tools/
 
-# 实用工具内置的第三方程序随仓库分发（与上面的参照项目不同，这里必须入库）
-!assets/tools/
-!assets/tools/**
+# 内置的第三方程序：Uninstall Tool 为商业软件，不随仓库分发；
+# 本地需要时自行放到 assets/tools/uninstalltool（程序会自动加载）
+assets/tools/uninstalltool/
+
+# 打包产物
+dist/
 dist/
