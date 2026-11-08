@@ -409,7 +409,19 @@ public partial class MemCleanPage : UserControl
     private void CleanNow_Click(object sender, RoutedEventArgs e)
     {
         SendConfig();
-        if (ConfirmCleanToggle.IsChecked == true)
+        RunClean(skipConfirm: false);
+    }
+
+    /// <summary>静默清理：不弹「清理前确认」，直接下发（UAC 仍按免 UAC 设置）。</summary>
+    private void SilentClean_Click(object sender, RoutedEventArgs e)
+    {
+        SendConfig();
+        RunClean(skipConfirm: true);
+    }
+
+    private void RunClean(bool skipConfirm)
+    {
+        if (!skipConfirm && ConfirmCleanToggle.IsChecked == true)
         {
             if (MessageBox.Show(BuildConfirmText(), "工具坞 · 内存清理",
                     MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK)
@@ -419,22 +431,30 @@ public partial class MemCleanPage : UserControl
         }
 
         CleanButton.IsEnabled = false;
-        if (AgentLink.Instance.Connected)
+        SilentCleanButton.IsEnabled = false;
+        try
         {
-            AgentLink.Instance.SendCleanNow(confirmed: true);
-        }
-        else
-        {
-            if (CleanupCore.IsElevated())
+            if (AgentLink.Instance.Connected)
             {
-                var result = CleanupCore.Clean(ReadMask());
-                MemFootnoteText.Text = $"已释放 {result.FreedBytes / 1073741824.0:0.00} GB";
+                AgentLink.Instance.SendCleanNow(confirmed: true);
             }
             else
             {
-                MemFootnoteText.Text = "独立模式无管理员权限，无法清理";
+                if (CleanupCore.IsElevated())
+                {
+                    var result = CleanupCore.Clean(ReadMask());
+                    MemFootnoteText.Text = $"已释放 {result.FreedBytes / 1073741824.0:0.00} GB";
+                }
+                else
+                {
+                    MemFootnoteText.Text = "独立模式无管理员权限，无法清理";
+                }
             }
         }
-        CleanButton.IsEnabled = true;
+        finally
+        {
+            CleanButton.IsEnabled = true;
+            SilentCleanButton.IsEnabled = true;
+        }
     }
 }

@@ -50,6 +50,8 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
     private DateTime _lastClean = DateTime.UtcNow;
     private DateTime _lastAutoHint = DateTime.MinValue;
     private DateTime _lastNearLog = DateTime.MinValue;
+    private DateTime _lastAutoTrigger = DateTime.MinValue;
+    private DateTime _lastStatusUpdate = DateTime.MinValue;
     private System.Threading.Timer? _autoTimer;
     private readonly object _gate = new();
 
@@ -85,8 +87,9 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
 
         ApplyHotkey();
 
-        // 30 秒采样一次：阈值型清理最多延迟半分钟，避免刚好错过瞬时高点
-        _autoTimer = new System.Threading.Timer(_ => AutoTick(), null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(30));
+        // 1 秒采样（Mem Reduct 同款）：越过阈值后 1 秒内触发清理；
+        // 清理任务异步执行，用 5 秒防抖避免内存还没降下来时连续拉起任务
+        _autoTimer = new System.Threading.Timer(_ => AutoTick(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
 
         context.Log.Info($"已启动（mask=0x{_mask:X} 自动清理={_autoClean} 阈值={_threshold}% 间隔={_intervalMinutes}分 免UAC={_skipUac} 自动含冻结区={_allowStandbyAuto} 清理确认={_confirmClean}）");
         return Task.CompletedTask;
@@ -257,7 +260,12 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
                 return;
             }
 
-            UpdateStatusLine();
+            // 托盘提示不需要每秒刷：10 秒一次足够（贴片自己每秒读）
+            if (DateTime.UtcNow - _lastStatusUpdate >= TimeSpan.FromSeconds(10))
+            {
+                _lastStatusUpdate = DateTime.UtcNow;
+                UpdateStatusLine();
+            }
 
             if (!_enabled || !_autoClean)
             {
@@ -276,9 +284,19 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
                 _context?.Log.Info($"自动检查：{snapshot.LoadPercent}% / 阈值 {_threshold}%（未达阈值）");
             }
 
-            if (by_threshold || by_interval)
+            if (by_threshold)
             {
-                CleanInternal(by_threshold ? "阈值" : "定时", confirmed: true);
+                // 秒级触发 + 5 秒防抖：清理任务在后台跑，任务结果回来前不重复拉起
+                if (DateTime.UtcNow - _lastAutoTrigger < TimeSpan.FromSeconds(5))
+                {
+                    return;
+                }
+                _lastAutoTrigger = DateTime.UtcNow;
+                CleanInternal("阈值", confirmed: true);
+            }
+            else if (by_interval)
+            {
+                CleanInternal("定时", confirmed: true);
             }
         }
         catch (Exception exception)

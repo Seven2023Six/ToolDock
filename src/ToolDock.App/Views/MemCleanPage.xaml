@@ -24,14 +24,26 @@
                 </StackPanel>
                 <TextBlock x:Name="SummaryText" Text="—" Style="{StaticResource PageSubtitleStyle}" Margin="0,2,0,0" />
             </StackPanel>
-            <Button Grid.Column="1" x:Name="CleanButton" Style="{StaticResource PrimaryButtonStyle}"
-                    Click="CleanNow_Click" VerticalAlignment="Top">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="&#xE74D;" Style="{StaticResource GlyphTextBlockStyle}" FontSize="14"
-                               VerticalAlignment="Center" />
-                    <TextBlock Text="立即清理" FontSize="14" Margin="8,0,0,0" />
-                </StackPanel>
-            </Button>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                <!-- 静默清理：跳过「清理前确认」弹窗，直接下发；UAC 仍按免 UAC 设置 -->
+                <Button x:Name="SilentCleanButton" Style="{StaticResource AppButtonStyle}"
+                        Click="SilentClean_Click"
+                        ToolTip="跳过清理前确认，直接清理（UAC 仍由免 UAC 设置决定）">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE7E8;" Style="{StaticResource GlyphTextBlockStyle}" FontSize="14"
+                                   VerticalAlignment="Center" />
+                        <TextBlock Text="静默清理" FontSize="14" Margin="8,0,0,0" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="CleanButton" Style="{StaticResource PrimaryButtonStyle}" Margin="8,0,0,0"
+                        Click="CleanNow_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE74D;" Style="{StaticResource GlyphTextBlockStyle}" FontSize="14"
+                                   VerticalAlignment="Center" />
+                        <TextBlock Text="立即清理" FontSize="14" Margin="8,0,0,0" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
         </Grid>
 
             <!-- 工具开关（决定是否出现在「内置工具」里可用） -->
