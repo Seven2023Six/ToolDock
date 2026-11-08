@@ -436,7 +436,7 @@ public partial class MemCleanPage : UserControl
         {
             if (AgentLink.Instance.Connected)
             {
-                AgentLink.Instance.SendCleanNow(confirmed: true);
+                AgentLink.Instance.SendCleanNow(confirmed: true, silent: skipConfirm);
             }
             else
             {

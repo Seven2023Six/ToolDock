@@ -264,7 +264,7 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                         break;
                     case "cleanNow":
                         LogFile.Write($"[pipe] 收到清理请求（confirmed={message.Confirmed}）");
-                        memclean?.CleanNowExternal(message.Confirmed);
+                        memclean?.CleanNowExternal(message.Confirmed, message.Silent);
                         break;
                     case "notify":
                         if (!string.IsNullOrWhiteSpace(message.Text))

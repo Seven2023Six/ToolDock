@@ -241,9 +241,9 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
     /// 托盘菜单 / App 按钮共用的手动清理入口（线程安全）。
     /// confirmed=false 时按"清理前确认"设置弹确认框（App 弹过确认后传 true）。
     /// </summary>
-    public void CleanNowExternal(bool confirmed)
+    public void CleanNowExternal(bool confirmed, bool silent = false)
     {
-        Task.Run(() => CleanInternal("手动", confirmed));
+        Task.Run(() => CleanInternal("手动", confirmed, silent));
     }
 
     /// <summary>自动清理生效掩码：默认剔除冻结区（Mem Reduct：SOURCE_AUTO 排除 REDUCT_MASK_FREEZES）。</summary>
@@ -305,7 +305,7 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
         }
     }
 
-    private void CleanInternal(string source, bool confirmed)
+    private void CleanInternal(string source, bool confirmed, bool silent = false)
     {
         lock (_gate)
         {
@@ -333,7 +333,7 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
             {
                 var result = CleanupCore.Clean(mask);
                 _lastClean = DateTime.UtcNow;
-                ReportResult(context, source, result.FreedBytes, result.Regions, flushed_via_helper: false);
+                ReportResult(context, source, result.FreedBytes, result.Regions, flushed_via_helper: false, silent);
                 return;
             }
 
@@ -345,7 +345,10 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
                 if (_skipUac && RunScheduledTask(task))
                 {
                     _lastClean = DateTime.UtcNow;
-                    context.Notify.Show("内存清理", $"自动清理已执行（{source}）");
+                    if (!silent)
+                    {
+                        context.Notify.Show("内存清理", $"自动清理已执行（{source}）");
+                    }
                     context.Log.Info($"自动清理已通过计划任务 {task} 执行（{source}，mask=0x{mask:X}）");
                     return;
                 }
@@ -359,7 +362,14 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
                 if (RunScheduledTask(TaskName))
                 {
                     _lastClean = DateTime.UtcNow;
-                    context.Notify.Show("内存清理", $"清理已执行（{source}）");
+                    if (!silent)
+                    {
+                        context.Notify.Show("内存清理", $"清理已执行（{source}）");
+                    }
+                    else
+                    {
+                        context.Log.Info("静默清理：已抑制气泡提示");
+                    }
                     context.Log.Info($"清理已通过计划任务 {TaskName} 执行（{source}，mask=0x{mask:X}）");
                     return;
                 }
@@ -418,12 +428,12 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
             }
 
             _lastClean = DateTime.UtcNow;
-            ReportResult(context, source, freed, regions, flushed_via_helper: true);
+            ReportResult(context, source, freed, regions, flushed_via_helper: true, silent);
         }
     }
 
     /// <summary>气泡 + 托盘状态行 + 日志（失败区域按 Mem Reduct 逐项记日志）。</summary>
-    private void ReportResult(IAgentContext context, string source, ulong freed, IReadOnlyList<CleanupCore.RegionResult>? regions, bool flushed_via_helper)
+    private void ReportResult(IAgentContext context, string source, ulong freed, IReadOnlyList<CleanupCore.RegionResult>? regions, bool flushed_via_helper, bool silent = false)
     {
         var failed = regions?.Where(r => (int)r.Status < 0).ToList();
         string summary = $"已释放内存：{FormatBytes(freed)}";
@@ -432,7 +442,7 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
             summary += $"（{failed.Count} 项失败）";
         }
 
-        if (_bubbleResults)
+        if (_bubbleResults && !silent)
         {
             context.Notify.Show("内存清理", summary);
         }

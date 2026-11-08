@@ -407,7 +407,7 @@ internal sealed class AgentLink : IDisposable
     }
 
     /// <summary>立即清理指令下发 Agent（confirmed=true 表示 App 端已弹过确认框）。</summary>
-    public void SendCleanNow(bool confirmed)
+    public void SendCleanNow(bool confirmed, bool silent = false)
     {
         if (!Connected || _pipe is null)
         {
@@ -418,7 +418,7 @@ internal sealed class AgentLink : IDisposable
         {
             try
             {
-                await PipeFrame.WriteAsync(pipe, new PipeMessage { T = "cleanNow", Confirmed = confirmed }, CancellationToken.None)
+                await PipeFrame.WriteAsync(pipe, new PipeMessage { T = "cleanNow", Confirmed = confirmed, Silent = silent }, CancellationToken.None)
                     .ConfigureAwait(false);
             }
             catch (Exception exception) when (exception is IOException or InvalidOperationException or ObjectDisposedException)

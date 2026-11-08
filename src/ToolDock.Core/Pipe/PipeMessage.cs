@@ -70,6 +70,9 @@ public sealed class PipeMessage
 
     /// <summary>true = 已有界面窗口在跑，本实例应立即退出（welcome）。</summary>
     public bool Duplicate { get; set; }
+
+    /// <summary>true = 静默清理：本次不弹任何气泡（仍记录日志）。</summary>
+    public bool Silent { get; set; }
 }
 
 /// <summary>内存清理插件的持久化设置（plugindata/memclean.json，键为 PascalCase）。供免 UAC 助手运行时读取掩码，任务因此只需安装一次。</summary>
