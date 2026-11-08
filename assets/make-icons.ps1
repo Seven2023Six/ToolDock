@@ -3,8 +3,10 @@
 #   assets/icon16.bgra    16x16 原始 BGRA —— Agent 托盘
 #   assets/icon32.bgra    32x32 原始 BGRA —— Agent 托盘(高 DPI)
 param(
-    [string]$Source = "D:\Users\22638\Downloads\GoogleChromeDownload\box.png",
-    [string]$OutDir = "D:\WorkSpace\Agent\Projects\ToolDock\assets"
+    # 源图：任意方形 PNG（示例：assets/box.png）
+    [Parameter(Mandatory = $true)][string]$Source,
+    # 输出目录，默认脚本所在目录（assets/）
+    [string]$OutDir = $PSScriptRoot
 )
 $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.Drawing
