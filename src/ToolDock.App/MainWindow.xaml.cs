@@ -111,6 +111,7 @@ public partial class MainWindow : Window
                 "home" => new HomePage(),
                 "battery" => new BatteryPage(),
                 "builtin" => new BuiltinToolsPage(),
+                "utility" => new UtilityToolsPage(),
                 "memclean" => new MemCleanPage(),
                 "custom" => new CustomToolsPage(),
                 "settings" => new SettingsPage(),

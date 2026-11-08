@@ -1,0 +1,52 @@
+<UserControl
+    x:Class="ToolDock.App.Views.UtilityToolsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Foreground="{DynamicResource Text.Primary}">
+
+    <!-- 实用工具页：随包内置的第三方实用程序（图标网格，点击直接启动）。 -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="24,20,24,0">
+            <TextBlock Text="实用工具" Style="{StaticResource PageTitleStyle}" />
+            <TextBlock Text="随工具箱一起分发的常用程序，单击图标直接启动" Style="{StaticResource PageSubtitleStyle}" Margin="0,4,0,0" />
+        </StackPanel>
+
+        <Border
+            Grid.Row="1"
+            Margin="24,16,24,0"
+            Padding="16,10"
+            CornerRadius="6"
+            Background="{DynamicResource Card.Background}"
+            BorderBrush="{DynamicResource Card.Stroke}"
+            BorderThickness="1">
+            <TextBlock
+                Opacity="0.8"
+                FontSize="13"
+                Foreground="{DynamicResource Text.Secondary}"
+                Text="提示：卸载工具需要管理员权限，启动时会请求 UAC。" />
+        </Border>
+
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <WrapPanel Margin="20,12,20,24" Orientation="Horizontal">
+                <Grid Margin="4">
+                    <Button
+                        x:Name="UninstallToolCard"
+                        AutomationProperties.Name="启动 Uninstall Tool"
+                        Click="UninstallTool_Click"
+                        Style="{StaticResource ToolCardButtonStyle}">
+                        <StackPanel HorizontalAlignment="Center">
+                            <Image Width="40" Height="40" HorizontalAlignment="Center" Source="pack://application:,,,/uninstalltool_icon.png" />
+                            <TextBlock Margin="0,10,0,0" HorizontalAlignment="Center" FontSize="13" Text="Uninstall Tool" TextAlignment="Center" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </WrapPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

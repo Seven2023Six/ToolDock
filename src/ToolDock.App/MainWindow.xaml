@@ -72,7 +72,13 @@
                                      Tag="&#xE71D;" Content="内置工具"
                                      CommandParameter="builtin"
                                      Checked="Nav_Checked" />
-                        <!-- 第三栏：自定义（最下方），清单后续注入 -->
+                        <!-- 第三栏：实用工具（随包内置的第三方程序） -->
+                        <RadioButton Style="{StaticResource NavItemStyle}"
+                                     GroupName="Nav"
+                                     Tag="&#xE90F;" Content="实用工具"
+                                     CommandParameter="utility"
+                                     Checked="Nav_Checked" />
+                        <!-- 第四栏：自定义（最下方），清单后续注入 -->
                         <RadioButton Style="{StaticResource NavItemStyle}"
                                      GroupName="Nav"
                                      Tag="&#xE8B7;" Content="自定义"

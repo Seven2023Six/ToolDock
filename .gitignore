@@ -9,3 +9,7 @@ publish/
 # 三个外部参照项目（vigil-watt / memreduct / ViVe）自带各自 git 仓库，
 # 暂不纳入本仓库版本管理；如需纳入请删除下面这行
 Tools/
+
+# 实用工具内置的第三方程序随仓库分发（与上面的参照项目不同，这里必须入库）
+!assets/tools/
+!assets/tools/**
