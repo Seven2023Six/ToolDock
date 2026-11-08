@@ -269,9 +269,6 @@ internal sealed class MemoryPillWindow : IDisposable
     private const double IconTextGapDip = 4;
     private const double PercentFontSizeDip = 13;
 
-    /// <summary>宽度余量（像素）：与电量贴片同因同解——量出来的字宽比实际绘制窄，不补就会截掉 "%"。</summary>
-    private const int SlackPx = 8;
-
     private void Render(int percent, double scale)
     {
         _bitmap?.Dispose();
@@ -292,8 +289,10 @@ internal sealed class MemoryPillWindow : IDisposable
         string label = percent + "%";
         float textW = MeasureG.MeasureString(label, font, new Gdi.PointF(0, 0), sf).Width;
 
-        // 右端给竖线留 2dip 间距，再加与电量贴片同等的字宽余量（SlackPx）
-        _pillW = (int)Math.Ceiling(pad + iconSize + gap + textW + 2 * scale + pad) + SlackPx;
+        // 竖线紧跟文字 4dip，位图到竖线即收尾：右侧间距交给电量贴片自己的左内边距，
+        // 两侧才对称（多留余量会把竖线推得离两边都远）
+        float textEnd = pad + iconSize + gap + textW;
+        _pillW = (int)Math.Ceiling(textEnd + 4 * scale) + 1;
 
         var bmp = new Gdi.Bitmap(_pillW, _pillH, GdiImaging.PixelFormat.Format32bppPArgb);
         using (var g = Gdi.Graphics.FromImage(bmp))
@@ -338,12 +337,10 @@ internal sealed class MemoryPillWindow : IDisposable
                 new Gdi.RectangleF(iconBox.Right + gap, 0, _pillW - iconBox.Right - gap, _pillH),
                 sf);
 
-            // 右侧竖线：与电量贴片内部的格间分隔线同款（1px 宽、14dip 高、垂直居中）。
-            // 位置贴住文字（4dip），不放到位图最右——位图末尾还留着防截断的 SlackPx 余量，
-            // 画到最右会让竖线离 "%" 太远，和电量贴片那一侧不对称。
+            // 右侧竖线：与电量贴片内部的格间分隔线同款（1px 宽、14dip 高、垂直居中），
+            // 就画在位图右缘，左边距文字 4dip，右边由电量贴片的左内边距构成。
             float dividerH = (float)(14 * scale);
-            float textEnd = iconBox.Right + gap + textW;
-            float dividerX = Math.Min(_pillW - Math.Max(1f, s), textEnd + (float)(4 * scale));
+            float dividerX = _pillW - Math.Max(1f, s);
             using var dividerPen = new Gdi.Pen(skin.Divider, Math.Max(1f, s));
             float top = (_pillH - dividerH) / 2f;
             g.DrawLine(dividerPen, dividerX, top, dividerX, top + dividerH);

@@ -13,8 +13,8 @@ namespace ToolDock.App.Services;
 /// </summary>
 public static class TaskbarPillRenderer
 {
-    /// <summary>贴片左右内边距（DIP）。</summary>
-    public const double PadH = 6;
+    /// <summary>贴片左右内边距（DIP）。和内存贴片并排时，它同时构成竖线右侧的间距。</summary>
+    public const double PadH = 4;
 
     private const double IconBox = 15;
     private const double IconTextGap = 4;

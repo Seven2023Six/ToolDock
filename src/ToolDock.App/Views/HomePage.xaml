@@ -46,15 +46,48 @@
                 </StackPanel>
             </Border>
 
-            <!-- 设备电量 Widget（M1 接入真数据） -->
-            <Border Grid.Row="0" Grid.Column="1"
-                    Style="{StaticResource CardStyle}" Padding="16,14" >
+            <!-- 设备电量 Widget：最低电量做主数字，其余设备一行一台；整卡点击进入电量页 -->
+            <Border x:Name="BatteryCard" Grid.Row="0" Grid.Column="1"
+                    Style="{StaticResource CardStyle}" Padding="16,14"
+                    Cursor="Hand" MouseLeftButtonUp="BatteryCard_Click"
+                    ToolTip="打开外设电量显示">
                 <StackPanel>
                     <TextBlock Text="设备电量" Style="{StaticResource CardLabelStyle}" />
-                    <TextBlock Text="—" FontSize="18" FontWeight="SemiBold"
-                               Foreground="{DynamicResource Text.Secondary}" Margin="0,6,0,0" />
-                    <TextBlock Text="打开「内置工具 → 外设电量显示」查看蓝牙与 2.4G 设备的实时电量"
-                               Style="{StaticResource CardFootnoteStyle}" Margin="0,4,0,0" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <TextBlock x:Name="BatteryLowText" Text="—" FontSize="46" FontWeight="Bold"
+                                   Foreground="{DynamicResource Text.Primary}" />
+                        <TextBlock x:Name="BatteryLowSuffix" Text="%" FontSize="18" FontWeight="SemiBold"
+                                   Margin="4,16,0,0" Foreground="{DynamicResource Text.Primary}"
+                                   Visibility="Collapsed" />
+                    </StackPanel>
+                    <TextBlock x:Name="BatteryLowName" Text="暂无在线设备"
+                               Foreground="{DynamicResource Text.Secondary}" Margin="0,2,0,0"
+                               TextTrimming="CharacterEllipsis" />
+                    <ItemsControl x:Name="BatteryDeviceList" Margin="0,8,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Glyph}" Style="{StaticResource GlyphTextBlockStyle}"
+                                               FontSize="13" Foreground="{DynamicResource Text.Secondary}"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="8,0,8,0"
+                                               FontSize="12" Foreground="{DynamicResource Text.Secondary}"
+                                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="2" Text="{Binding PercentText}"
+                                               FontSize="12" FontWeight="SemiBold"
+                                               Foreground="{Binding Brush}" VerticalAlignment="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock x:Name="BatteryHint" Text="查看详情 ›"
+                               Style="{StaticResource CardFootnoteStyle}" Margin="0,10,0,0"
+                               Foreground="{DynamicResource Accent}" Visibility="Collapsed" />
                 </StackPanel>
             </Border>
 
