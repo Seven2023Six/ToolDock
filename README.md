@@ -15,7 +15,7 @@ Windows 托盘**工具坞**：常驻 Agent + 按需启动的 WPF 界面，把系
 | --- | --- | --- |
 | 内置工具 | 内存清理（对齐 Mem Reduct） | 可用 |
 | 内置工具 | 外设电量显示（VigilWatt 全功能） | 可用 |
-| 实用工具 | Uninstall Tool（第三方，本地放置） | 可选 |
+| 实用工具 | Uninstall Tool 3.8.2（随仓库内置） | 可用 |
 | 贴片 | 内存占用 / 设备电量 | 可用 |
 
 ## 功能
@@ -114,7 +114,7 @@ python scripts/package-win-x64.py        # 产物 dist/ToolDock-<版本>-win-x64
 
 - [VigilWatt.Core](https://github.com/evren-oct/vigil-watt)（MIT）：外设电量数据层，`Tools/vigil-watt`
 - Mem Reduct（GPL-3.0）：仅作行为参考，未链接其代码
-- Uninstall Tool：商业软件，**不随仓库分发**；如需使用请自行放置到 `assets/tools/uninstalltool/`
+- Uninstall Tool 3.8.2：完整目录随仓库内置于 `assets/tools/uninstalltool/`（含 `unins000.*`），仅限授权使用
 
 ## 许可
 
