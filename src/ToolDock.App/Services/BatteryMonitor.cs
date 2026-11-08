@@ -22,6 +22,7 @@ public sealed class BatteryMonitor : IDisposable
     private AppSettings? _settings;
     private HistoryStore? _history;
     private string _lastError = "";
+    private volatile bool _toolEnabled = true;
 
     /// <summary>启动失败时的原因（界面用于提示），成功为空。</summary>
     public string LastError
@@ -57,13 +58,17 @@ public sealed class BatteryMonitor : IDisposable
                 _history = new HistoryStore(Path.Combine(dir, "battery-history.db"));
 
                 _settings = settings;
+                _toolEnabled = UiSettings.Load().IsToolEnabled("battery");
                 _manager = new DeviceManager(settings, _history);
                 _manager.LowBatteryDetected += OnLowBattery;
                 _manager.DevicesChanged += PushBatteryStatus;
-                _manager.DeviceUpdated += _ => PushBatteryStatus();
+                _manager.DeviceUpdated += OnDeviceUpdated;
                 _manager.Start();
                 _ = _manager.RequestPollAsync();
-                Pill.Start();
+                if (_toolEnabled)
+                {
+                    Pill.Start();
+                }
                 _lastError = "";
             }
             catch (Exception exception)
@@ -130,9 +135,7 @@ public sealed class BatteryMonitor : IDisposable
         }
         try
         {
-            string path = SettingsFilePath;
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllText(path, JsonSerializer.Serialize(settings, SerializerOptions));
+            ToolDock.Core.AtomicFile.WriteAllText(SettingsFilePath, JsonSerializer.Serialize(settings, SerializerOptions));
             return true;
         }
         catch
@@ -231,8 +234,36 @@ public sealed class BatteryMonitor : IDisposable
     private string? _lastStatusText;
 
     /// <summary>低电量提醒：经 Agent 弹托盘气泡（阈值由 DeviceManager 按设置判定）。</summary>
+    private void OnDeviceUpdated(DeviceStatus _) => PushBatteryStatus();
+
+    /// <summary>外设电量工具的启用/停用：停用时下线任务栏贴片、清托盘状态与提醒。</summary>
+    public void SetToolEnabled(bool enabled)
+    {
+        _toolEnabled = enabled;
+        if (enabled)
+        {
+            if (!Started)
+            {
+                Start();
+            }
+            Pill.Refresh();
+            _lastStatusText = null;
+            PushBatteryStatus();
+        }
+        else
+        {
+            Pill.Stop();
+            _lastStatusText = null;
+            try { AgentLink.Instance.SendBatteryStatus(null); } catch { }
+        }
+    }
+
     private void OnLowBattery(DeviceStatus device)
     {
+        if (!_toolEnabled)
+        {
+            return;
+        }
         try
         {
             AgentLink.Instance.SendNotify("电量提醒", $"{device.DisplayName} 电量 {device.BatteryPercent}%，请及时充电");
@@ -246,6 +277,10 @@ public sealed class BatteryMonitor : IDisposable
     /// <summary>把在线设备里最低的电量同步到托盘提示（文本变化才发，避免刷管道）。</summary>
     private void PushBatteryStatus()
     {
+        if (!_toolEnabled)
+        {
+            return;
+        }
         DeviceManager? manager;
         lock (_gate) { manager = _manager; }
         if (manager is null)
@@ -313,6 +348,7 @@ public sealed class BatteryMonitor : IDisposable
             {
                 _manager.LowBatteryDetected -= OnLowBattery;
                 _manager.DevicesChanged -= PushBatteryStatus;
+                _manager.DeviceUpdated -= OnDeviceUpdated;
             }
         }
         catch

@@ -97,7 +97,10 @@ public partial class BatterySettingsView : UserControl
         {
             return;
         }
-        Services.UiSettings.Load().SetToolEnabled("battery", ToolEnabledToggle.IsChecked == true);
+        bool enabled = ToolEnabledToggle.IsChecked == true;
+        Services.UiSettings.Load().SetToolEnabled("battery", enabled);
+        // 停用后任务栏贴片、托盘状态与低电量提醒一并下线；重新启用则恢复
+        BatteryMonitor.Instance.SetToolEnabled(enabled);
     }
 
     private void SelectAllPlugins_Click(object sender, RoutedEventArgs e)

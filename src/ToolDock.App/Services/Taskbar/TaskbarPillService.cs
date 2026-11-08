@@ -22,7 +22,7 @@ public sealed class TaskbarPillService
         {
             return;
         }
-        if (PillHost.Settings?.TaskbarBatteryEnabled != true)
+        if (PillHost.Settings?.TaskbarBatteryEnabled != true || !UiSettings.Load().IsToolEnabled("battery"))
         {
             return;
         }
@@ -40,7 +40,7 @@ public sealed class TaskbarPillService
     /// <summary>设置改动后立即重排（启用/关闭/换模式/换屏）。</summary>
     public void Refresh()
     {
-        if (PillHost.Settings?.TaskbarBatteryEnabled == true)
+        if (PillHost.Settings?.TaskbarBatteryEnabled == true && UiSettings.Load().IsToolEnabled("battery"))
         {
             if (_manager is null)
             {
@@ -50,6 +50,19 @@ public sealed class TaskbarPillService
             {
                 _manager.RefreshFromSettings();
             }
+        }
+        else
+        {
+            Stop();
+        }
+    }
+
+    /// <summary>工具总开关变化时调用：停用即下线贴片，重新启用则恢复。</summary>
+    public void ApplyToolState(bool toolEnabled)
+    {
+        if (toolEnabled)
+        {
+            Refresh();
         }
         else
         {

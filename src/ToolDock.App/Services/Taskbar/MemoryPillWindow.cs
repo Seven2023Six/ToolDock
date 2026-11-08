@@ -22,7 +22,6 @@ internal sealed class MemoryPillWindow : IDisposable
     private const double MaxHeightDip = 40;
     private const double TaskbarMarginDip = 6;
     private const double EdgeGapDip = 6;      // 距任务栏右端（无电量贴片时）
-    private const double SeparationDip = 10;  // 与电量贴片之间的间隔
 
     private static readonly Gdi.Bitmap MeasureBmp = new(1, 1, GdiImaging.PixelFormat.Format32bppPArgb);
     private static readonly Gdi.Graphics MeasureG = Gdi.Graphics.FromImage(MeasureBmp);
@@ -45,7 +44,6 @@ internal sealed class MemoryPillWindow : IDisposable
     private int _pillW = 80;
     private int _pillH = 30;
     private int _lastPercent = -1;
-    private bool _hidden;
     private WndProcDelegate? _wndProc;
 
     public MemoryPillWindow(IntPtr taskbar, Action onClick, Action onHide)
@@ -172,7 +170,7 @@ internal sealed class MemoryPillWindow : IDisposable
 
     private void UpdateCore()
     {
-        if (_hwnd == IntPtr.Zero || _hidden)
+        if (_hwnd == IntPtr.Zero)
         {
             return;
         }

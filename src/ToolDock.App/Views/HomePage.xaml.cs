@@ -32,7 +32,15 @@ public partial class HomePage : UserControl
         {
             Interval = TimeSpan.FromSeconds(2),
         };
-        _timer.Tick += (_, _) => Refresh();
+        _timer.Tick += (_, _) =>
+        {
+            // 窗口隐藏到托盘时不必每 2 秒刷新界面
+            if (Window.GetWindow(this) is { IsVisible: false })
+            {
+                return;
+            }
+            Refresh();
+        };
         Loaded += (_, _) => { Refresh(); _timer.Start(); };
         Unloaded += (_, _) => _timer.Stop();
     }
@@ -58,6 +66,24 @@ public partial class HomePage : UserControl
 
     private void RefreshBattery()
     {
+        // 工具被停用时卡片只显示停用提示，也不启动电量采样
+        if (!UiSettings.Load().IsToolEnabled("battery"))
+        {
+            BatteryLowText.Text = "—";
+            BatteryLowSuffix.Visibility = Visibility.Collapsed;
+            BatteryLowText.Foreground = (Brush)Application.Current.Resources["Text.Primary"];
+            BatteryLowName.Text = "外设电量工具已停用";
+            BatteryHint.Visibility = Visibility.Collapsed;
+            if (_deviceRows.Count > 0)
+            {
+                _deviceRows.Clear();
+                BatteryDeviceList.ItemsSource = null;
+                BatteryDeviceList.ItemsSource = _deviceRows;
+            }
+            _batterySignature = "";
+            return;
+        }
+
         var monitor = BatteryMonitor.Instance;
         if (!monitor.Started)
         {

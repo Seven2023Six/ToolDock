@@ -19,6 +19,8 @@ internal sealed class TrayIconController : IDisposable
     private IntPtr _hIcon;
     private bool _added;
     private uint _taskbarCreatedMsg;
+    /// <summary>菜单项、状态行、热键表都会被管道线程改、被消息循环读，必须串行访问。</summary>
+    private readonly object _lock = new();
     private readonly List<(string Text, Action Action)> _pluginItems = new();
     private readonly Dictionary<string, string> _statusLines = new();
 
@@ -66,7 +68,10 @@ internal sealed class TrayIconController : IDisposable
 
     public void RequestExit() => NativeMethods.PostMessageW(_hwnd, NativeMethods.WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
 
-    public void AddPluginItem(string text, Action action) => _pluginItems.Add((text, action));
+    public void AddPluginItem(string text, Action action)
+    {
+        lock (_lock) { _pluginItems.Add((text, action)); }
+    }
 
     /// <summary>移除指定文字的插件菜单项（工具被停用时把入口一并撤掉）。</summary>
     private readonly Dictionary<int, Action> _hotkeys = new();
@@ -75,18 +80,21 @@ internal sealed class TrayIconController : IDisposable
     /// <summary>注册全局热键（挂在托盘消息窗口上）；返回的 IDisposable 用于注销。</summary>
     public IDisposable RegisterHotkey(uint modifiers, uint virtualKey, Action callback)
     {
-        int id = _nextHotkeyId++;
+        int id;
+        lock (_lock) { id = _nextHotkeyId++; }
         if (!NativeMethods.RegisterHotKey(_hwnd, id, modifiers, virtualKey))
         {
             return new NullDisposable();
         }
-        _hotkeys[id] = callback;
+        lock (_lock) { _hotkeys[id] = callback; }
         return new HotkeyHandle(this, id);
     }
 
     private void UnregisterHotkey(int id)
     {
-        if (_hotkeys.Remove(id))
+        bool removed;
+        lock (_lock) { removed = _hotkeys.Remove(id); }
+        if (removed)
         {
             NativeMethods.UnregisterHotKey(_hwnd, id);
         }
@@ -111,17 +119,25 @@ internal sealed class TrayIconController : IDisposable
     }
 
     public void RemovePluginItem(string text)
-        => _pluginItems.RemoveAll(item => string.Equals(item.Text, text, StringComparison.Ordinal));
+    {
+        lock (_lock)
+        {
+            _pluginItems.RemoveAll(item => string.Equals(item.Text, text, StringComparison.Ordinal));
+        }
+    }
 
     public void UpdateStatusLine(string pluginId, string? text)
     {
-        if (text is null)
+        lock (_lock)
         {
-            _statusLines.Remove(pluginId);
-        }
-        else
-        {
-            _statusLines[pluginId] = text;
+            if (text is null)
+            {
+                _statusLines.Remove(pluginId);
+            }
+            else
+            {
+                _statusLines[pluginId] = text;
+            }
         }
         ModifyIcon(NativeMethods.NIF_TIP);
     }
@@ -202,7 +218,9 @@ internal sealed class TrayIconController : IDisposable
     private string BuildTip()
     {
         var tip = "工具坞 ToolDock";
-        foreach (var line in _statusLines.Values)
+        List<string> lines;
+        lock (_lock) { lines = new List<string>(_statusLines.Values); }
+        foreach (var line in lines)
         {
             tip += "\n" + line;
         }
@@ -216,10 +234,13 @@ internal sealed class TrayIconController : IDisposable
         {
             NativeMethods.AppendMenuW(menu, NativeMethods.MF_STRING, (UIntPtr)1, "打开工具坞");
             uint nextId = 100;
-            if (_pluginItems.Count > 0)
+            // 快照：菜单弹出期间插件可能被停用并从列表移除，直接索引会越界
+            (string Text, Action Action)[] items;
+            lock (_lock) { items = _pluginItems.ToArray(); }
+            if (items.Length > 0)
             {
                 NativeMethods.AppendMenuW(menu, NativeMethods.MF_SEPARATOR, UIntPtr.Zero, null);
-                foreach (var (text, _) in _pluginItems)
+                foreach (var (text, _) in items)
                 {
                     NativeMethods.AppendMenuW(menu, NativeMethods.MF_STRING, (UIntPtr)nextId, text);
                     nextId++;
@@ -244,9 +265,9 @@ internal sealed class TrayIconController : IDisposable
             {
                 ExitRequested?.Invoke();
             }
-            else if (cmd >= 100 && cmd - 100 < (uint)_pluginItems.Count)
+            else if (cmd >= 100 && cmd - 100 < (uint)items.Length)
             {
-                _pluginItems[(int)(cmd - 100)].Action();
+                items[(int)(cmd - 100)].Action();
             }
         }
         finally
@@ -288,10 +309,9 @@ internal sealed class TrayIconController : IDisposable
         if (msg == NativeMethods.WM_HOTKEY)
         {
             int id = (int)wParam.ToInt64();
-            if (self._hotkeys.TryGetValue(id, out var callback))
-            {
-                callback();
-            }
+            Action? callback;
+            lock (self._lock) { self._hotkeys.TryGetValue(id, out callback); }
+            callback?.Invoke();
             return IntPtr.Zero;
         }
 

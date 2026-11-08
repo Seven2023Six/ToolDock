@@ -2,6 +2,7 @@ using System.IO.Pipes;
 using System.Text.Json.Nodes;
 using ToolDock.Abstractions;
 using ToolDock.Agent.Native;
+using ToolDock.Core;
 
 namespace ToolDock.Agent;
 
@@ -101,8 +102,7 @@ internal sealed class JsonFileSettingsStore(string pluginId) : ISettingsStore
         {
             lock (_gate)
             {
-                Directory.CreateDirectory(DirectoryPath);
-                File.WriteAllText(PathFor(pluginId),
+                AtomicFile.WriteAllText(PathFor(pluginId),
                     _root.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
             }
         }, cancellationToken);

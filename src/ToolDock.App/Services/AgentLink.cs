@@ -439,19 +439,20 @@ internal sealed class AgentLink : IDisposable
                 }
                 if (message.T == "shutdown")
                 {
-                    Application.Current?.Dispatcher.Invoke(App.ExitApp);
+                    // 不阻塞读取线程：界面忙时 Invoke 会卡住管道
+                    Application.Current?.Dispatcher.BeginInvoke(App.ExitApp);
                     break;
                 }
                 if (message.T == "activate")
                 {
-                    Application.Current?.Dispatcher.Invoke(() =>
+                    Application.Current?.Dispatcher.BeginInvoke(() =>
                         (Application.Current.MainWindow as MainWindow)?.BringToFront());
                 }
                 if (message.T == "skipUac")
                 {
                     // Agent 侧安装失败回退时推回真实状态，界面开关跟着复位
                     CurrentSkipUac = message.Enable;
-                    SkipUacChanged?.Invoke(message.Enable);
+                    Application.Current?.Dispatcher.BeginInvoke(() => SkipUacChanged?.Invoke(message.Enable));
                 }
             }
             Connected = false;

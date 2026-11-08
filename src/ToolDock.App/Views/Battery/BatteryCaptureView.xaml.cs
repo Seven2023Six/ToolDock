@@ -45,7 +45,22 @@ public partial class BatteryCaptureView : UserControl
             }
             RenderSteps();
         };
-        Unloaded += (_, _) => _timer.Stop();
+        Unloaded += (_, _) =>
+        {
+            _timer.Stop();
+            // 离开页面时结束采集：会话线程/句柄不能留在后台空转
+            if (_session is not null)
+            {
+                try { _session.Dispose(); } catch { }
+                _session = null;
+                StartButton.IsEnabled = true;
+                NextStepButton.IsEnabled = false;
+                StopButton.IsEnabled = false;
+                DeviceList.IsEnabled = true;
+                ProbeButton.IsEnabled = _selected is not null;
+                CaptureStatus.Text = "采集已停止（离开页面）";
+            }
+        };
     }
 
     // ---- 设备与接口 ----

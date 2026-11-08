@@ -39,6 +39,13 @@ internal static class Program
                     return 0;
                 }
 
+                case "-taskclean":
+                {
+                    // 旧版任务自带掩码数字（/taskclean <mask>），保留兼容
+                    CleanupCore.Clean(mask);
+                    return 0;
+                }
+
                 case "-taskclean-manual":
                 case "-taskclean-auto":
                 {
@@ -110,12 +117,13 @@ internal static class Program
     /// <summary>读取自动清理生效掩码：默认剔除冻结区（Mem Reduct：SOURCE_AUTO 排除备用/已修改列表）。</summary>
     private static ulong ReadPluginAutoMask()
     {
+        const ulong freezes = CleanupCore.RegionStandbyList | CleanupCore.RegionModifiedList;
         var data = ReadPluginData();
         if (data is null)
         {
-            return CleanupCore.MaskDefault;
+            // 设置不可读时按自动语义保守处理：不碰冻结区
+            return CleanupCore.MaskDefault & ~freezes;
         }
-        const ulong freezes = CleanupCore.RegionStandbyList | CleanupCore.RegionModifiedList;
         return data.AllowFreezes ? data.Mask : (data.Mask & ~freezes);
     }
 
@@ -199,8 +207,15 @@ internal static class Program
                 ok = false;
                 return "（进程启动失败）";
             }
-            string stderr = process.StandardError.ReadToEnd().Trim();
-            process.WaitForExit(30000);
+            // 先等待带超时，再收 stderr：直接 ReadToEnd 会在子进程挂住时永久阻塞
+            var stderrTask = process.StandardError.ReadToEndAsync();
+            if (!process.WaitForExit(30000))
+            {
+                try { process.Kill(entireProcessTree: true); } catch { }
+                ok = false;
+                return "schtasks: 执行超时（30 秒）";
+            }
+            string stderr = stderrTask.GetAwaiter().GetResult().Trim();
             ok = process.ExitCode == 0;
             return ok ? "" : "schtasks: " + (stderr.Length > 0 ? stderr.Split('\n')[0].Trim() : $"exit={process.ExitCode}");
         }

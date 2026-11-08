@@ -78,7 +78,6 @@ public sealed class AppSettings
 
     public void Save()
     {
-        Directory.CreateDirectory(DirectoryPath);
-        File.WriteAllText(FilePath, JsonSerializer.Serialize(this, ToolDockJsonContext.Default.AppSettings));
+        AtomicFile.WriteAllText(FilePath, JsonSerializer.Serialize(this, ToolDockJsonContext.Default.AppSettings));
     }
 }

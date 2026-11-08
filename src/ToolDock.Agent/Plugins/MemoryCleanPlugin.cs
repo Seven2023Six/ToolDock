@@ -160,33 +160,27 @@ internal sealed class MemoryCleanPlugin : IBackgroundPlugin
     public (ulong Mask, bool AutoClean, uint Threshold, uint IntervalMinutes, bool SkipUac, bool AllowFreezes, bool ConfirmClean, bool BubbleResults, bool LogResults) GetCleanState()
         => (_mask, _autoClean, _threshold, _intervalMinutes, _skipUac, _allowStandbyAuto, _confirmClean, _bubbleResults, _logResults);
 
-    public void ApplyConfig(ulong mask, bool autoClean, uint threshold, uint intervalMinutes, bool skipUac, bool allowFreezes, bool confirmClean, bool bubbleResults, bool logResults)
+    /// <summary>
+    /// 清理配置更新。**不含免 UAC**：开关由 SetSkipUac 专门管理，
+    /// 否则客户端漏发该字段（默认 false）会在每次改区域/阈值时把任务删掉。
+    /// </summary>
+    public void ApplyConfig(ulong mask, bool autoClean, uint threshold, uint intervalMinutes, bool allowFreezes, bool confirmClean, bool bubbleResults, bool logResults)
     {
         _bubbleResults = bubbleResults;
         _logResults = logResults;
-        bool skip_uac_before = _skipUac;
         _mask = mask;
         _autoClean = autoClean;
         // 范围钳制：非法值（0 或越界）一律回落到安全默认，避免界面出现「全 0」状态
         _threshold = threshold is >= 50 and <= 99 ? threshold : 90u;
         _intervalMinutes = intervalMinutes is >= 5 and <= 720 ? intervalMinutes : 30u;
-        _skipUac = skipUac;
         _allowStandbyAuto = allowFreezes;
         _confirmClean = confirmClean;
 
         Persist();
         UpdateStatusLine();
 
-        // 免 UAC 状态迁移：新开启→装任务；关闭→卸任务（非提权删除走提权助手）；持续开启→仅缺失时重建
-        if (_skipUac && !skip_uac_before)
-        {
-            Task.Run(InstallTask);
-        }
-        else if (!_skipUac && skip_uac_before)
-        {
-            Task.Run(UninstallTask);
-        }
-        else if (_skipUac)
+        // 免 UAC 开着时顺手校验任务（缺失且已提权才静默重建，不弹 UAC），但不改变开关状态
+        if (_skipUac)
         {
             Task.Run(EnsureTasks);
         }

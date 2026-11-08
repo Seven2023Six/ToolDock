@@ -21,10 +21,19 @@ public partial class MemCleanPage : UserControl
         {
             Interval = TimeSpan.FromSeconds(2),
         };
-        _timer.Tick += (_, _) => RefreshMemory();
+        _timer.Tick += (_, _) =>
+        {
+            // 窗口隐藏到托盘时不必每 2 秒刷新界面
+            if (Window.GetWindow(this) is { IsVisible: false })
+            {
+                return;
+            }
+            RefreshMemory();
+        };
         Loaded += (_, _) =>
         {
             LoadState();
+            AgentLink.SkipUacChanged += OnSkipUacChanged;
             RefreshMemory();
             _timer.Start();
             _syncing = true;
@@ -38,7 +47,6 @@ public partial class MemCleanPage : UserControl
             _timer.Stop();
             AgentLink.SkipUacChanged -= OnSkipUacChanged;
         };
-        AgentLink.SkipUacChanged += OnSkipUacChanged;
     }
 
     /// <summary>Agent 回退免 UAC（安装被取消/失败）时把开关同步回真实状态。</summary>

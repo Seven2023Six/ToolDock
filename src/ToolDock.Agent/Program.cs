@@ -105,7 +105,9 @@ internal static class Program
             [
                 Path.Combine(AppContext.BaseDirectory, "app", "ToolDock.exe"),
                 Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
-                    "ToolDock.App", "bin", "Debug", "net8.0-windows", "ToolDock.exe"),
+                    "ToolDock.App", "bin", "Release", "net8.0-windows10.0.19041.0", "ToolDock.exe"),
+                Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
+                    "ToolDock.App", "bin", "Debug", "net8.0-windows10.0.19041.0", "ToolDock.exe"),
             ];
             var exePath = candidates.FirstOrDefault(File.Exists);
             if (exePath is null)

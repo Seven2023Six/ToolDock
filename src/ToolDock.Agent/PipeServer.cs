@@ -15,6 +15,9 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
     private NamedPipeServerStream? _appConnection;
     private readonly object _gate = new();
 
+    /// <summary>写界面连接的串行锁：push 状态、激活、退出通知可能来自不同线程，帧不能交错。</summary>
+    private readonly SemaphoreSlim _pushGate = new(1, 1);
+
     public async Task RunAsync(CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
@@ -48,17 +51,36 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
         {
             app = _appConnection;
         }
+        WriteToApp(app, message);
+    }
+
+    /// <summary>串行写一帧到界面连接；超时/断开静默放弃（界面是短命进程）。</summary>
+    private void WriteToApp(NamedPipeServerStream? app, PipeMessage message, int timeoutMs = 800)
+    {
         if (app is not { IsConnected: true })
         {
             return;
         }
+        bool acquired = false;
         try
         {
-            PipeFrame.WriteAsync(app, message, CancellationToken.None).Wait(800);
+            acquired = _pushGate.Wait(timeoutMs);
+            if (!acquired)
+            {
+                return;
+            }
+            PipeFrame.WriteAsync(app, message, CancellationToken.None).Wait(timeoutMs);
         }
         catch
         {
             // 界面已退出/管道已断，无需处理
+        }
+        finally
+        {
+            if (acquired)
+            {
+                _pushGate.Release();
+            }
         }
     }
 
@@ -70,17 +92,7 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
         {
             app = _appConnection;
         }
-        if (app is { IsConnected: true })
-        {
-            try
-            {
-                PipeFrame.WriteAsync(app, new PipeMessage { T = "shutdown" }, CancellationToken.None).Wait(800);
-            }
-            catch
-            {
-                // 界面已退出/管道已断，无需处理
-            }
-        }
+        WriteToApp(app, new PipeMessage { T = "shutdown" });
     }
 
     private async Task HandleClientAsync(NamedPipeServerStream server, CancellationToken cancellationToken)
@@ -128,12 +140,13 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
             LogFile.Write("[pipe] 客户端接入");
 
             PipeMessage welcome;
+            NamedPipeServerStream? activateTarget;
             lock (_gate)
             {
-                if (_appConnection is { IsConnected: true })
+                activateTarget = _appConnection is { IsConnected: true } ? _appConnection : null;
+                if (activateTarget is not null)
                 {
                     // 已有界面窗口：让旧实例置前，新实例拿 duplicate 标记自行退出
-                    _ = PipeFrame.WriteAsync(_appConnection, new PipeMessage { T = "activate" }, CancellationToken.None);
                     welcome = new PipeMessage { T = "welcome", Duplicate = true };
                 }
                 else
@@ -165,6 +178,12 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                     }
                 }
             }
+            // 激活旧界面在锁外串行写，避免与 push 状态帧交错
+            if (activateTarget is not null)
+            {
+                WriteToApp(activateTarget, new PipeMessage { T = "activate" });
+            }
+
             await PipeFrame.WriteAsync(server, welcome, cancellationToken);
 
             if (welcome.Duplicate)
@@ -228,7 +247,7 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                         }
                         break;
                     case "setCleanCfg":
-                        memclean?.ApplyConfig(message.Mask, message.AutoClean, message.Threshold, message.IntervalM, message.SkipUac, message.AllowFreezes, message.ConfirmClean, message.BubbleResults, message.LogResults);
+                        memclean?.ApplyConfig(message.Mask, message.AutoClean, message.Threshold, message.IntervalM, message.AllowFreezes, message.ConfirmClean, message.BubbleResults, message.LogResults);
                         LogFile.Write($"[pipe] 清理配置已更新：mask=0x{message.Mask:X} 自动={message.AutoClean} 阈值={message.Threshold}% 间隔={message.IntervalM}分 免UAC={message.SkipUac} 自动含冻结区={message.AllowFreezes} 清理确认={message.ConfirmClean}");
                         break;
                     case "setSkipUac":

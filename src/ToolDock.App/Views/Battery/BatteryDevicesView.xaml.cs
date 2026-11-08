@@ -23,7 +23,15 @@ public partial class BatteryDevicesView : UserControl
         DeviceList.ItemsSource = _rows;
 
         _timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(2) };
-        _timer.Tick += (_, _) => Update();
+        _timer.Tick += (_, _) =>
+        {
+            // 窗口隐藏到托盘时不必每 2 秒刷新设备列表
+            if (Window.GetWindow(this) is { IsVisible: false })
+            {
+                return;
+            }
+            Update();
+        };
 
         Loaded += (_, _) =>
         {
