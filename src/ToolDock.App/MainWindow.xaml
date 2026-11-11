@@ -1,4 +1,4 @@
-<Window x:Class="ToolDock.App.MainWindow"
+﻿<Window x:Class="ToolDock.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
@@ -65,25 +65,25 @@
                                      Tag="&#xE80F;" Content="首页"
                                      CommandParameter="home"
                                      IsChecked="True"
-                                     Checked="Nav_Checked" />
+                                     Click="Nav_Click" Checked="Nav_Checked" />
                         <!-- 第二栏：内置工具（图吧式图标网格，点图标进入对应工具页） -->
                         <RadioButton Style="{StaticResource NavItemStyle}"
                                      GroupName="Nav"
                                      Tag="&#xE71D;" Content="内置工具"
                                      CommandParameter="builtin"
-                                     Checked="Nav_Checked" />
+                                     Click="Nav_Click" Checked="Nav_Checked" />
                         <!-- 第三栏：实用工具（随包内置的第三方程序） -->
                         <RadioButton Style="{StaticResource NavItemStyle}"
                                      GroupName="Nav"
                                      Tag="&#xE90F;" Content="实用工具"
                                      CommandParameter="utility"
-                                     Checked="Nav_Checked" />
+                                     Click="Nav_Click" Checked="Nav_Checked" />
                         <!-- 第四栏：自定义（最下方），清单后续注入 -->
                         <RadioButton Style="{StaticResource NavItemStyle}"
                                      GroupName="Nav"
                                      Tag="&#xE8B7;" Content="自定义"
                                      CommandParameter="custom"
-                                     Checked="Nav_Checked" />
+                                     Click="Nav_Click" Checked="Nav_Checked" />
                     </StackPanel>
 
                     <!-- 底部固定区：设置 / 关于 永远在最下（NavigationView FooterMenuItems 观感） -->
@@ -93,12 +93,12 @@
                                      GroupName="Nav"
                                      Tag="&#xE713;" Content="设置"
                                      CommandParameter="settings"
-                                     Checked="Nav_Checked" />
+                                     Click="Nav_Click" Checked="Nav_Checked" />
                         <RadioButton Style="{StaticResource NavItemStyle}"
                                      GroupName="Nav"
                                      Tag="&#xE946;" Content="关于"
                                      CommandParameter="about"
-                                     Checked="Nav_Checked" />
+                                     Click="Nav_Click" Checked="Nav_Checked" />
                     </StackPanel>
                 </Grid>
             </Border>

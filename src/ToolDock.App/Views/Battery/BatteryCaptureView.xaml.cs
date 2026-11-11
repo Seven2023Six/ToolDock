@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
@@ -197,7 +197,7 @@ public partial class BatteryCaptureView : UserControl
         var parts = new List<string> { CaptureDeviceCatalog.ShortInterface(device.InterfaceKey) };
         if (device.UsagePage != 0)
         {
-            parts.Add($"usage 0x{device.UsagePage:X4}:0x{device.Usage:X4}");
+            parts.Add($"用途 0x{device.UsagePage:X4}:0x{device.Usage:X4}");
         }
         if (device.AccessDenied)
         {
@@ -434,6 +434,22 @@ public sealed class InterfaceItem
     public override string ToString() => Label;
 }
 
+/// <summary>把底层探测返回的少量英文 API/字段名换成界面文案。</summary>
+internal static class CaptureText
+{
+    public static string Localize(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return text;
+        }
+        return text
+            .Replace("HidD_GetSerialNumberString 未返回内容", "设备未返回序列号")
+            .Replace("usage 0x", "用途 0x")
+            .Replace("长度 in/out/feat =", "长度 输入/输出/特性 =");
+    }
+}
+
 /// <summary>接口能力行。</summary>
 public sealed class CapabilityRow
 {
@@ -460,7 +476,7 @@ public sealed class CapabilityRow
             Source = item,
             Title = item.Title,
             StatusText = text,
-            Evidence = string.IsNullOrEmpty(item.Evidence) ? item.Reason ?? "" : item.Evidence!,
+            Evidence = CaptureText.Localize(string.IsNullOrEmpty(item.Evidence) ? item.Reason ?? "" : item.Evidence!),
             StatusBrush = brush,
         };
     }

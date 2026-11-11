@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -107,6 +107,11 @@ public partial class SettingsPage : UserControl
 
     private void ClearLogs_Click(object sender, RoutedEventArgs e)
     {
+        if (MessageBox.Show(@"清空 %APPDATA%\ToolDock\logs 下的所有日志？正在写入的日志文件会跳过。",
+                "工具坞 · 清空日志", MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK)
+        {
+            return;
+        }
         try
         {
             var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -115,14 +120,23 @@ public partial class SettingsPage : UserControl
             {
                 return;
             }
+            int deleted = 0;
             foreach (var file in Directory.GetFiles(dir, "*.log"))
             {
-                try { File.Delete(file); } catch (IOException) { /* 被占用的日志跳过 */ }
+                try
+                {
+                    File.Delete(file);
+                    deleted++;
+                }
+                catch (IOException) { /* 被占用的日志跳过 */ }
             }
+            MessageBox.Show($"已清空 {deleted} 个日志文件。", "工具坞 · 清空日志",
+                MessageBoxButton.OK, MessageBoxImage.Information);
         }
-        catch
+        catch (Exception exception)
         {
-            // 清理失败不影响功能
+            MessageBox.Show("清空日志失败：" + exception.Message, "工具坞 · 清空日志",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 }

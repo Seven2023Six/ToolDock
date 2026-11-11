@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 输入法状态提示（InputTip 原生移植）：无 UI 依赖、可被 NativeAOT 的 Agent 直接引用。
+       渲染走 Win32 分层窗口 + GDI，不引用 WPF/System.Drawing。 -->
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsAotCompatible>true</IsAotCompatible>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 单元测试可访问内部规则引擎/探测逻辑 -->
+    <InternalsVisibleTo Include="ToolDock.Tests" />
+  </ItemGroup>
+
+</Project>

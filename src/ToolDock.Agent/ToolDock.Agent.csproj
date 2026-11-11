@@ -8,6 +8,7 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PublishAot>true</PublishAot>
     <InvariantGlobalization>true</InvariantGlobalization>
     <!-- 常驻内存瘦身：非并发 GC、裁剪资源串与堆栈信息、按体积优化 -->
@@ -16,12 +17,15 @@
     <StackTraceSupport>false</StackTraceSupport>
     <OptimizationPreference>Size</OptimizationPreference>
     <ApplicationIcon>..\..\assets\app.ico</ApplicationIcon>
-    <Version>0.2.0</Version>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- 可选：用别名输出原生镜像（某些杀软会长时间占用 ToolDock.Agent.exe，便于并行验证） -->
+    <AssemblyName Condition="'$(ToolDockAgentAssemblyName)' != ''">$(ToolDockAgentAssemblyName)</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ToolDock.Abstractions\ToolDock.Abstractions.csproj" />
     <ProjectReference Include="..\ToolDock.Core\ToolDock.Core.csproj" />
+    <ProjectReference Include="..\ToolDock.InputTip\ToolDock.InputTip.csproj" />
   </ItemGroup>
 
   <!-- 托盘图标原始像素（由 assets/make-icons.ps1 从 box.png 生成） -->
@@ -32,6 +36,22 @@
     <EmbeddedResource Include="..\..\assets\icon32.bgra"
                       Link="TrayIconData/icon32.bgra"
                       LogicalName="ToolDock.Agent.TrayIconData.icon32.bgra" />
+  </ItemGroup>
+
+  <!-- 输入法状态提示：默认光标与符号资源（首次启动复制到 %APPDATA%\ToolDock\inputtip\assets） -->
+  <ItemGroup>
+    <None Include="..\..\assets\tools\inputtip\**\*"
+          Link="tools\inputtip\%(RecursiveDir)%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest"
+          Visible="false" />
+  </ItemGroup>
+
+  <!-- 窗口拖拽：内置 AltSnap 引擎（宿主 DLL + hooks.dll + 默认 ini），由 Agent 进程内加载 -->
+  <ItemGroup>
+    <None Include="..\..\assets\tools\altsnap\**\*"
+          Link="tools\altsnap\%(RecursiveDir)%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest"
+          Visible="false" />
   </ItemGroup>
 
 </Project>

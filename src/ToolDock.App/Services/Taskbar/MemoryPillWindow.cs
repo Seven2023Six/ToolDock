@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Threading;
 using Gdi = System.Drawing;
@@ -190,7 +190,7 @@ internal sealed class MemoryPillWindow : IDisposable
 
         var taskbar = new PixelRect(taskbarRect.Left, taskbarRect.Top,
             taskbarRect.Right - taskbarRect.Left, taskbarRect.Bottom - taskbarRect.Top);
-        if (TaskbarLayout.IsTaskbarHidden(taskbar))
+        if (taskbar.Width <= 0 || taskbar.Height <= 0 || TaskbarLayout.IsTaskbarHidden(taskbar))
         {
             Native.ShowWindow(_hwnd, Native.SW_HIDE);
             return;
@@ -269,6 +269,10 @@ internal sealed class MemoryPillWindow : IDisposable
 
     private void Render(int percent, double scale)
     {
+        if (_pillH <= 0 || scale <= 0)
+        {
+            return;
+        }
         _bitmap?.Dispose();
 
         float s = (float)scale;
@@ -289,8 +293,17 @@ internal sealed class MemoryPillWindow : IDisposable
 
         // 竖线紧跟文字 4dip，位图到竖线即收尾：右侧间距交给电量贴片自己的左内边距，
         // 两侧才对称（多留余量会把竖线推得离两边都远）
+        if (!float.IsFinite(textW) || textW < 0)
+        {
+            return;
+        }
         float textEnd = pad + iconSize + gap + textW;
-        _pillW = (int)Math.Ceiling(textEnd + 4 * scale) + 1;
+        int width = (int)Math.Ceiling(textEnd + 4 * scale) + 1;
+        if (width <= 0 || width > 4096)
+        {
+            return;
+        }
+        _pillW = width;
 
         var bmp = new Gdi.Bitmap(_pillW, _pillH, GdiImaging.PixelFormat.Format32bppPArgb);
         using (var g = Gdi.Graphics.FromImage(bmp))

@@ -12,7 +12,6 @@
     <AssemblyName>ToolDock</AssemblyName>
     <RootNamespace>ToolDock.App</RootNamespace>
     <ApplicationIcon>..\..\assets\app.ico</ApplicationIcon>
-    <Version>0.2.0</Version>
   </PropertyGroup>
 
   <!-- 界面进程短命（关窗即退），非并发 GC 略降内存开销 -->
@@ -23,12 +22,21 @@
   <ItemGroup>
     <!-- 任务栏贴片用 GDI+ 画 ARGB 位图（原生分层窗口，不走 XAML） -->
     <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+    <!-- MAS 汉化：运行脚本按 GBK(cp936) 写入（控制台原生代码页），需要代码页提供程序 -->
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ToolDock.Core\ToolDock.Core.csproj" />
+    <!-- 输入法提示的设置模型与 JSON 上下文（引擎本体在 Agent 进程内） -->
+    <ProjectReference Include="..\ToolDock.InputTip\ToolDock.InputTip.csproj" />
     <!-- VigilWatt 数据层（MIT）：BLE GATT + 经典蓝牙 + 2.4G HID 多品牌插件，复用以求功能对等 -->
     <ProjectReference Include="..\..\Tools\vigil-watt\src\VigilWatt.Core\VigilWatt.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 单元测试可访问内部纯逻辑（MasPatcher/MasUpdater 等） -->
+    <InternalsVisibleTo Include="ToolDock.Tests" />
   </ItemGroup>
 
   <!-- 窗口/任务栏图标：WPF Window.Icon 通过 pack URI 加载 -->
@@ -38,16 +46,22 @@
     <Resource Include="..\..\assets\battery_icon.png" Link="battery_icon.png" />
     <Resource Include="..\..\assets\uninstalltool_icon.png" Link="uninstalltool_icon.png" />
     <Resource Include="..\..\assets\altsnap_icon.png" Link="altsnap_icon.png" />
+    <Resource Include="..\..\assets\inputtip_icon.png" Link="inputtip_icon.png" />
+    <Resource Include="..\..\assets\mas_icon.png" Link="mas_icon.png" />
+  </ItemGroup>
+
+  <!-- MAS 激活工具：官方 MAS_AIO.cmd 随包分发到 tools\mas\（页面按 AppContext.BaseDirectory 定位） -->
+  <ItemGroup>
+    <None Include="..\..\assets\tools\mas\MAS_AIO.cmd"
+          Link="tools\mas\MAS_AIO.cmd"
+          CopyToOutputDirectory="PreserveNewest"
+          Visible="false" />
   </ItemGroup>
 
   <!-- 实用工具：第三方程序随包分发到 tools\<名称>\，页面按 AppContext.BaseDirectory 定位 -->
   <ItemGroup>
     <None Include="..\..\assets\tools\uninstalltool\**\*"
           Link="tools\uninstalltool\%(RecursiveDir)%(Filename)%(Extension)"
-          CopyToOutputDirectory="PreserveNewest"
-          Visible="false" />
-    <None Include="..\..\assets\tools\altsnap\**\*"
-          Link="tools\altsnap\%(RecursiveDir)%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest"
           Visible="false" />
   </ItemGroup>

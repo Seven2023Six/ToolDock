@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace ToolDock.Core;
@@ -205,6 +206,91 @@ public static class CleanupCore
         return new CleanupResult(before.UsedBytes, after.UsedBytes, regions, privilege_diag, flush_diag);
     }
 
+    /// <summary>
+    /// 非提权兜底清理：逐个回收同用户进程的工作集。
+    /// 系统级区域（备用列表/系统文件缓存等）没有管理员权限必然失败，
+    /// 但工作集回收只需要 PROCESS_SET_QUOTA，标准用户对自己的进程可用。
+    /// 自动清理在提权助手不可用时走这条路，保证「自动清理」不会变成空操作。
+    /// </summary>
+    public static CleanupResult TrimWorkingSets(ulong mask)
+    {
+        var before = ReadMemorySnapshot();
+        int trimmed = 0, failed = 0, skipped = 0;
+
+        if ((mask & RegionWorkingSet) != 0)
+        {
+            foreach (var process in Process.GetProcesses())
+            {
+                try
+                {
+                    if (process.Id <= 4)
+                    {
+                        continue;
+                    }
+
+                    long working_set;
+                    try
+                    {
+                        working_set = process.WorkingSet64;
+                    }
+                    catch
+                    {
+                        failed++;
+                        continue;
+                    }
+
+                    // 小进程回收收益极低，频繁触发反而增加抖动
+                    if (working_set < 16L * 1024 * 1024)
+                    {
+                        skipped++;
+                        continue;
+                    }
+
+                    IntPtr handle = NativeMethods.OpenProcess(
+                        NativeMethods.ProcessSetQuota | NativeMethods.ProcessQueryInformation,
+                        false,
+                        process.Id);
+                    if (handle == IntPtr.Zero)
+                    {
+                        failed++;
+                        continue;
+                    }
+                    try
+                    {
+                        if (NativeMethods.EmptyWorkingSet(handle))
+                        {
+                            trimmed++;
+                        }
+                        else
+                        {
+                            failed++;
+                        }
+                    }
+                    finally
+                    {
+                        NativeMethods.CloseHandle(handle);
+                    }
+                }
+                catch
+                {
+                    failed++;
+                }
+                finally
+                {
+                    process.Dispose();
+                }
+            }
+        }
+
+        var after = ReadMemorySnapshot();
+        string diag = $"逐进程工作集 trimmed={trimmed} failed={failed} skipped={skipped}";
+        var regions = new List<RegionResult>
+        {
+            new("工作集（逐进程）", trimmed > 0 ? 0u : 0xC0000022u),
+        };
+        return new CleanupResult(before.UsedBytes, after.UsedBytes, regions, diag, "");
+    }
+
     // ---- 特权启用（advapi32 标准做法，带全量诊断）----
 
     public static string EnablePrivileges(out uint status)
@@ -388,6 +474,15 @@ public static class CleanupCore
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool CloseHandle(IntPtr handle);
+
+        public const uint ProcessSetQuota = 0x0100;
+        public const uint ProcessQueryInformation = 0x0400;
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr OpenProcess(uint desired_access, bool inherit_handle, int process_id);
+
+        [DllImport("psapi.dll", SetLastError = true)]
+        public static extern bool EmptyWorkingSet(IntPtr process);
 
         [DllImport("shell32.dll")]
         public static extern bool IsUserAnAdmin();

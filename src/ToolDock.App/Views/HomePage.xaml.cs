@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -69,11 +69,12 @@ public partial class HomePage : UserControl
         // 工具被停用时卡片只显示停用提示，也不启动电量采样
         if (!UiSettings.Load().IsToolEnabled("battery"))
         {
-            BatteryLowText.Text = "—";
+            BatteryLowText.Text = "无数据";
+            BatteryLowText.FontSize = 24;
             BatteryLowSuffix.Visibility = Visibility.Collapsed;
-            BatteryLowText.Foreground = (Brush)Application.Current.Resources["Text.Primary"];
+            BatteryLowText.Foreground = (Brush)Application.Current.Resources["Text.Secondary"];
             BatteryLowName.Text = "外设电量工具已停用";
-            BatteryHint.Visibility = Visibility.Collapsed;
+            BatteryHint.Visibility = Visibility.Visible;
             if (_deviceRows.Count > 0)
             {
                 _deviceRows.Clear();
@@ -133,14 +134,16 @@ public partial class HomePage : UserControl
 
         if (hero is null)
         {
-            BatteryLowText.Text = "—";
+            BatteryLowText.Text = "无数据";
+            BatteryLowText.FontSize = 24;
             BatteryLowSuffix.Visibility = Visibility.Collapsed;
-            BatteryLowText.Foreground = (Brush)Application.Current.Resources["Text.Primary"];
+            BatteryLowText.Foreground = (Brush)Application.Current.Resources["Text.Secondary"];
             BatteryLowName.Text = online.Count == 0 ? "暂无在线设备" : "电量未知";
         }
         else
         {
             BatteryLowText.Text = hero.BatteryPercent!.Value.ToString();
+            BatteryLowText.FontSize = 46;
             BatteryLowSuffix.Visibility = Visibility.Visible;
             var brush = BrushFor(hero);
             BatteryLowText.Foreground = brush;
@@ -148,11 +151,29 @@ public partial class HomePage : UserControl
             BatteryLowName.Text = hero.DisplayName + DeviceStatusFormatter.ChargeSuffix(hero.Charging);
         }
 
-        BatteryHint.Visibility = online.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        BatteryHint.Visibility = Visibility.Visible;
     }
 
     private void BatteryCard_Click(object sender, MouseButtonEventArgs e)
         => (Window.GetWindow(this) as MainWindow)?.ShowPage("battery");
+
+    private void OpenMemClean_Click(object sender, RoutedEventArgs e)
+        => (Window.GetWindow(this) as MainWindow)?.ShowPage("memclean");
+
+    private void OpenBattery_Click(object sender, RoutedEventArgs e)
+        => (Window.GetWindow(this) as MainWindow)?.ShowPage("battery");
+
+    private void OpenAltSnap_Click(object sender, RoutedEventArgs e)
+        => (Window.GetWindow(this) as MainWindow)?.ShowPage("altsnap");
+
+    private void OpenInputTip_Click(object sender, RoutedEventArgs e)
+        => (Window.GetWindow(this) as MainWindow)?.ShowPage("inputtip");
+
+    private void OpenMas_Click(object sender, RoutedEventArgs e)
+        => (Window.GetWindow(this) as MainWindow)?.ShowPage(Services.MasService.ToolKey);
+
+    private void OpenSettings_Click(object sender, RoutedEventArgs e)
+        => (Window.GetWindow(this) as MainWindow)?.ShowPage("settings");
 
     private void CleanNow_Click(object sender, RoutedEventArgs e)
     {

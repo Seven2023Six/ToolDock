@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 
 namespace ToolDock.App.Views;
@@ -22,6 +22,8 @@ public partial class BuiltinToolsPage : UserControl
         ApplyCardState(MemCleanCard, MemCleanBadge, settings.IsToolEnabled("memclean"));
         ApplyCardState(BatteryCard, BatteryBadge, settings.IsToolEnabled("battery"));
         ApplyCardState(AltSnapCard, AltSnapBadge, settings.IsToolEnabled("altsnap"));
+        ApplyCardState(InputTipCard, InputTipBadge, settings.IsToolEnabled("inputtip"));
+        // MAS 激活工具无常驻状态：没有启用开关，卡片始终可用
     }
 
     private static void ApplyCardState(Button card, Border badge, bool enabled)
@@ -38,4 +40,10 @@ public partial class BuiltinToolsPage : UserControl
 
     private void AltSnap_Click(object sender, RoutedEventArgs e)
         => (Window.GetWindow(this) as MainWindow)?.ShowPage("altsnap");
+
+    private void InputTip_Click(object sender, RoutedEventArgs e)
+        => (Window.GetWindow(this) as MainWindow)?.ShowPage("inputtip");
+
+    private void Mas_Click(object sender, RoutedEventArgs e)
+        => (Window.GetWindow(this) as MainWindow)?.ShowPage(Services.MasService.ToolKey);
 }

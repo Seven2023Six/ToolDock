@@ -1,4 +1,4 @@
-using System.IO.Pipes;
+﻿using System.IO.Pipes;
 using ToolDock.Core;
 
 namespace ToolDock.Agent;
@@ -8,7 +8,7 @@ namespace ToolDock.Agent;
 /// App 是短命进程：握手（hello → welcome），随后双向收发。
 /// settings.json 的唯一写者在这里——App 的主题变更通过管道送达后落盘。
 /// </summary>
-internal sealed class PipeServer(AppSettings settings, string agentExePath, TrayIconController tray, MemoryCleanPlugin? memclean = null)
+internal sealed class PipeServer(AppSettings settings, string agentExePath, TrayIconController tray, MemoryCleanPlugin? memclean = null, AltSnapPlugin? altsnap = null, InputTipPlugin? inputtip = null)
 {
     private const string PipeName = "tooldock-agent";
 
@@ -95,6 +95,38 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
         WriteToApp(app, new PipeMessage { T = "shutdown" });
     }
 
+    private void FillInputTip(PipeMessage message)
+    {
+        if (inputtip is null)
+        {
+            message.InputTipEnabled = false;
+            message.InputTipRunning = false;
+            return;
+        }
+        var (enabled, running, paused, state, configPath, engine) = inputtip.GetConfig();
+        message.InputTipEnabled = enabled;
+        message.InputTipRunning = running;
+        message.InputTipPaused = paused;
+        message.InputTipState = state;
+        message.InputTipConfigPath = configPath;
+        message.InputTipEngine = engine;
+    }
+
+    private void FillAltSnap(PipeMessage message)
+    {
+        if (altsnap is null)
+        {
+            message.AltSnapEnabled = false;
+            message.AltSnapRunning = false;
+            return;
+        }
+        var (enabled, running, iniPath, engine) = altsnap.GetConfig();
+        message.AltSnapEnabled = enabled;
+        message.AltSnapRunning = running;
+        message.AltSnapIniPath = iniPath;
+        message.AltSnapEngine = engine;
+    }
+
     private async Task HandleClientAsync(NamedPipeServerStream server, CancellationToken cancellationToken)
     {
         try
@@ -137,7 +169,7 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                 server.Dispose();
                 return;
             }
-            LogFile.Write("[pipe] 客户端接入");
+            LogFile.Write($"[pipe] 客户端接入（协议 v{hello.Ver}）");
 
             PipeMessage welcome;
             NamedPipeServerStream? activateTarget;
@@ -147,7 +179,7 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                 if (activateTarget is not null)
                 {
                     // 已有界面窗口：让旧实例置前，新实例拿 duplicate 标记自行退出
-                    welcome = new PipeMessage { T = "welcome", Duplicate = true };
+                    welcome = new PipeMessage { T = "welcome", Duplicate = true, Ver = PipeProtocol.Version };
                 }
                 else
                 {
@@ -155,6 +187,7 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                     welcome = new PipeMessage
                     {
                         T = "welcome",
+                        Ver = PipeProtocol.Version,
                         Theme = settings.Theme,
                         Backdrop = settings.Backdrop,
                         AutoStart = settings.AutoStart,
@@ -175,7 +208,13 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                         welcome.HotkeyMods = hotkey.Mods;
                         welcome.HotkeyVk = hotkey.Vk;
                         welcome.LogResults = logres;
+                        var lastClean = memclean.GetLastClean();
+                        welcome.LastCleanFreed = lastClean.Freed;
+                        welcome.LastCleanAt = lastClean.At;
+                        welcome.LastCleanFailed = lastClean.Failed;
                     }
+                    FillAltSnap(welcome);
+                    FillInputTip(welcome);
                 }
             }
             // 激活旧界面在锁外串行写，避免与 push 状态帧交错
@@ -201,11 +240,16 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                 }
                 switch (message.T)
                 {
+                    case "ping":
+                        // 心跳：App 定时探活，原样回 pong（不触发状态刷新）
+                        await PipeFrame.WriteAsync(server, new PipeMessage { T = "pong", Ver = PipeProtocol.Version }, cancellationToken);
+                        break;
                     case "getSettings":
                     {
                         var reply = new PipeMessage
                         {
                             T = "settings",
+                            Ver = PipeProtocol.Version,
                             Theme = settings.Theme,
                             Backdrop = settings.Backdrop,
                             AutoStart = settings.AutoStart,
@@ -226,10 +270,67 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                         reply.HotkeyMods = hotkey2.Mods;
                         reply.HotkeyVk = hotkey2.Vk;
                         reply.LogResults = logres;
+                        var lastClean = memclean.GetLastClean();
+                        reply.LastCleanFreed = lastClean.Freed;
+                        reply.LastCleanAt = lastClean.At;
+                        reply.LastCleanFailed = lastClean.Failed;
                         }
+                        FillAltSnap(reply);
+                        FillInputTip(reply);
                         await PipeFrame.WriteAsync(server, reply, cancellationToken);
                         break;
                     }
+                    case "getAltSnap":
+                    {
+                        var reply = new PipeMessage { T = "altSnap", Ver = PipeProtocol.Version };
+                        FillAltSnap(reply);
+                        FillInputTip(reply);
+                        await PipeFrame.WriteAsync(server, reply, cancellationToken);
+                        break;
+                    }
+                    case "setAltSnap":
+                        // 旧版界面会发这条消息；配置文件方式已取代逐项下发，忽略。
+                        break;
+                    case "getInputTip":
+                    {
+                        var reply = new PipeMessage { T = "inputTip", Ver = PipeProtocol.Version };
+                        FillInputTip(reply);
+                        await PipeFrame.WriteAsync(server, reply, cancellationToken);
+                        break;
+                    }
+                    case "setInputTipEnabled":
+                        inputtip?.SetEnabled(message.Enable);
+                        break;
+                    case "setInputTipPaused":
+                        inputtip?.SetPaused(message.Enable);
+                        break;
+                    case "inputTipAction":
+                        if (!string.IsNullOrWhiteSpace(message.Text))
+                        {
+                            inputtip?.RunTrigger(message.Text);
+                        }
+                        break;
+                    case "restartInputTip":
+                        _ = Task.Run(() =>
+                        {
+                            inputtip?.Reload();
+                            var state = new PipeMessage { T = "inputTip", Ver = PipeProtocol.Version };
+                            FillInputTip(state);
+                            PushState(state);
+                        });
+                        break;
+                    case "setAltSnapEnabled":
+                        altsnap?.SetEnabled(message.Enable);
+                        break;
+                    case "restartAltSnap":
+                        _ = Task.Run(() =>
+                        {
+                            altsnap?.RestartEngine();
+                            var state = new PipeMessage { T = "altSnap", Ver = PipeProtocol.Version };
+                            FillAltSnap(state);
+                            PushState(state);
+                        });
+                        break;
                     case "setTheme":
                         if (message.Theme is "Light" or "Dark")
                         {
@@ -248,10 +349,10 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                         break;
                     case "setCleanCfg":
                         memclean?.ApplyConfig(message.Mask, message.AutoClean, message.Threshold, message.IntervalM, message.AllowFreezes, message.ConfirmClean, message.BubbleResults, message.LogResults);
-                        LogFile.Write($"[pipe] 清理配置已更新：mask=0x{message.Mask:X} 自动={message.AutoClean} 阈值={message.Threshold}% 间隔={message.IntervalM}分 免UAC={message.SkipUac} 自动含冻结区={message.AllowFreezes} 清理确认={message.ConfirmClean}");
+                        LogFile.Write($"[pipe] 清理配置已更新：mask=0x{message.Mask:X} 自动={message.AutoClean} 阈值={message.Threshold}% 间隔={message.IntervalM}分 自动含冻结区={message.AllowFreezes} 清理确认={message.ConfirmClean} 气泡={message.BubbleResults} 日志={message.LogResults}");
                         break;
                     case "setSkipUac":
-                        // 安装/卸载计划任务可能弹一次 UAC 或等待提权助手回传，放到后台避免堵住管道
+                        // 启动提权助手会请求一次管理员授权并等待管道就绪，放到后台避免堵住管道
                         LogFile.Write($"[pipe] 免UAC开关请求：{message.Enable}");
                         _ = Task.Run(() =>
                         {
@@ -265,6 +366,23 @@ internal sealed class PipeServer(AppSettings settings, string agentExePath, Tray
                     case "cleanNow":
                         LogFile.Write($"[pipe] 收到清理请求（confirmed={message.Confirmed}）");
                         memclean?.CleanNowExternal(message.Confirmed, message.Silent);
+                        // 清理在后台线程执行（1-5 秒）：稍后把最近一次结果推回界面，避免"上次清理"要重开页面才更新
+                        _ = Task.Run(async () =>
+                        {
+                            await Task.Delay(6000);
+                            if (memclean is null)
+                            {
+                                return;
+                            }
+                            var (freed, at, failed) = memclean.GetLastClean();
+                            PushState(new PipeMessage
+                            {
+                                T = "cleanState",
+                                LastCleanFreed = freed,
+                                LastCleanAt = at,
+                                LastCleanFailed = failed,
+                            });
+                        });
                         break;
                     case "notify":
                         if (!string.IsNullOrWhiteSpace(message.Text))

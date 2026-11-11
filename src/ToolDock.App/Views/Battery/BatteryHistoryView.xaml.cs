@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using ToolDock.App.Services;
@@ -49,6 +49,11 @@ public partial class BatteryHistoryView : UserControl
         {
             return;
         }
+        if (MessageBox.Show("删除该设备的全部历史记录？此操作不可撤销。", "工具坞 · 历史记录",
+                MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK)
+        {
+            return;
+        }
         BatteryMonitor.Instance.DeleteHistory(new[] { deviceId });
         Reload();
     }
@@ -57,6 +62,11 @@ public partial class BatteryHistoryView : UserControl
     {
         var settings = BatteryMonitor.Instance.Settings;
         int days = settings?.HistoryRetentionDays ?? 90;
+        if (MessageBox.Show($"清理超过 {days} 天的历史记录？", "工具坞 · 历史记录",
+                MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK)
+        {
+            return;
+        }
         var cutoff = DateTimeOffset.Now.AddDays(-days);
         int removed = BatteryMonitor.Instance.CleanupHistory(cutoff);
         Reload();

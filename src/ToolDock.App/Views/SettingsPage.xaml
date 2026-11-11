@@ -1,4 +1,4 @@
-<UserControl x:Class="ToolDock.App.Views.SettingsPage"
+﻿<UserControl x:Class="ToolDock.App.Views.SettingsPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
@@ -19,11 +19,7 @@
 
                 <!-- 外观 -->
                 <StackPanel Margin="0,0,0,18">
-                    <StackPanel Orientation="Horizontal" Margin="2,0,0,8">
-                        <Border Width="3" Height="14" CornerRadius="1.5" VerticalAlignment="Center"
-                                Background="{DynamicResource Accent}" />
-                        <TextBlock Text="外观" Style="{StaticResource SectionTitleStyle}" Margin="8,0,0,0" />
-                    </StackPanel>
+                    <TextBlock Text="外观" Style="{StaticResource SectionTitleStyle}" Margin="2,0,0,8" />
                     <Border Style="{StaticResource SettingsCardStyle}">
                         <StackPanel>
                             <Grid Margin="0,12">
@@ -49,7 +45,7 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                     <TextBlock Text="窗口背景" Style="{StaticResource RowTitleStyle}" />
-                                    <TextBlock Text="Mica / 亚克力 / 纯色，切换立即生效；系统不支持时自动回退"
+                                    <TextBlock Text="云母 / 亚克力 / 纯色，切换立即生效；系统不支持时自动回退"
                                                Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -69,11 +65,7 @@
 
                 <!-- 托盘与启动 -->
                 <StackPanel Margin="0,0,0,18">
-                    <StackPanel Orientation="Horizontal" Margin="2,0,0,8">
-                        <Border Width="3" Height="14" CornerRadius="1.5" VerticalAlignment="Center"
-                                Background="{DynamicResource Accent}" />
-                        <TextBlock Text="托盘与启动" Style="{StaticResource SectionTitleStyle}" Margin="8,0,0,0" />
-                    </StackPanel>
+                    <TextBlock Text="托盘与启动" Style="{StaticResource SectionTitleStyle}" Margin="2,0,0,8" />
                     <Border Style="{StaticResource SettingsCardStyle}">
                         <StackPanel>
                             <Grid Margin="0,12">
@@ -96,11 +88,7 @@
 
                 <!-- 日志 -->
                 <StackPanel Margin="0,0,0,18">
-                    <StackPanel Orientation="Horizontal" Margin="2,0,0,8">
-                        <Border Width="3" Height="14" CornerRadius="1.5" VerticalAlignment="Center"
-                                Background="{DynamicResource Accent}" />
-                        <TextBlock Text="日志" Style="{StaticResource SectionTitleStyle}" Margin="8,0,0,0" />
-                    </StackPanel>
+                    <TextBlock Text="日志" Style="{StaticResource SectionTitleStyle}" Margin="2,0,0,8" />
                     <Border Style="{StaticResource SettingsCardStyle}">
                         <StackPanel>
                             <Grid Margin="0,12">

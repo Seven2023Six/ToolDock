@@ -1,4 +1,4 @@
-<UserControl x:Class="ToolDock.App.Views.MemCleanPage"
+﻿<UserControl x:Class="ToolDock.App.Views.MemCleanPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
@@ -28,6 +28,7 @@
                 <!-- 静默清理：跳过「清理前确认」弹窗，直接下发；UAC 仍按免 UAC 设置 -->
                 <Button x:Name="SilentCleanButton" Style="{StaticResource AppButtonStyle}"
                         Click="SilentClean_Click"
+                        AutomationProperties.Name="静默清理"
                         ToolTip="跳过清理前确认，直接清理（UAC 仍由免 UAC 设置决定）">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE7E8;" Style="{StaticResource GlyphTextBlockStyle}" FontSize="14"
@@ -36,7 +37,7 @@
                     </StackPanel>
                 </Button>
                 <Button x:Name="CleanButton" Style="{StaticResource PrimaryButtonStyle}" Margin="8,0,0,0"
-                        Click="CleanNow_Click">
+                        Click="CleanNow_Click" AutomationProperties.Name="立即清理">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE74D;" Style="{StaticResource GlyphTextBlockStyle}" FontSize="14"
                                    VerticalAlignment="Center" />
@@ -88,7 +89,9 @@
                         </Border>
                         <TextBlock x:Name="MemFootnoteText" Text="已用 — / — GB"
                                    Style="{StaticResource CardFootnoteStyle}" Margin="0,6,0,0" />
-                        <TextBlock x:Name="GroupsText" Text="页面文件 — · 系统缓存 —"
+                        <TextBlock x:Name="GroupsText" Text="提交内存 — / — GB"
+                                   Style="{StaticResource CardFootnoteStyle}" Margin="0,2,0,0" />
+                        <TextBlock x:Name="LastCleanText" Text="上次清理：—"
                                    Style="{StaticResource CardFootnoteStyle}" Margin="0,2,0,0" />
                     </StackPanel>
                 </Border>
@@ -126,14 +129,12 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="占用超过阈值时清理" Style="{StaticResource RowTitleStyle}" />
-                                <TextBlock Text="阈值 %（50-99）" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
+                                <TextBlock Text="启用自动清理" Style="{StaticResource RowTitleStyle}" />
+                                <TextBlock Text="占用达到阈值或到达定时间隔时自动执行，两者任一满足即可"
+                                           Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" TextWrapping="Wrap" />
                             </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBox x:Name="ThresholdBox" Width="52" Height="32" Text="90" Style="{StaticResource WinUITextBoxStyle}" />
-                                <ToggleButton x:Name="ThresholdToggle" Style="{StaticResource SwitchStyle}"
-                                              Checked="AutoClean_Changed" Unchecked="AutoClean_Changed" Margin="12,0,0,0" />
-                            </StackPanel>
+                            <ToggleButton x:Name="AutoCleanToggle" Grid.Column="1" Style="{StaticResource SwitchStyle}"
+                                          Checked="AutoClean_Changed" Unchecked="AutoClean_Changed" VerticalAlignment="Center" />
                         </Grid>
                         <Border Style="{StaticResource RowDividerStyle}" />
                         <Grid Margin="0,12">
@@ -142,14 +143,26 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="定时清理" Style="{StaticResource RowTitleStyle}" />
-                                <TextBlock Text="间隔分钟（5-720）" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
+                                <TextBlock Text="占用阈值" Style="{StaticResource RowTitleStyle}" />
+                                <TextBlock Text="达到该占用率后触发自动清理（50-99）" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
                             </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBox x:Name="IntervalBox" Width="52" Height="32" Text="30" Style="{StaticResource WinUITextBoxStyle}" />
-                                <ToggleButton x:Name="IntervalToggle" Style="{StaticResource SwitchStyle}"
-                                              Checked="AutoClean_Changed" Unchecked="AutoClean_Changed" Margin="12,0,0,0" />
+                            <TextBox x:Name="ThresholdBox" Grid.Column="1" Width="52" Height="32" Text="90"
+                                     VerticalContentAlignment="Center" Style="{StaticResource WinUITextBoxStyle}"
+                                     LostFocus="AutoValue_LostFocus" />
+                        </Grid>
+                        <Border Style="{StaticResource RowDividerStyle}" />
+                        <Grid Margin="0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="定时间隔" Style="{StaticResource RowTitleStyle}" />
+                                <TextBlock Text="每隔多少分钟执行一次（5-720）" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
                             </StackPanel>
+                            <TextBox x:Name="IntervalBox" Grid.Column="1" Width="52" Height="32" Text="30"
+                                     VerticalContentAlignment="Center" Style="{StaticResource WinUITextBoxStyle}"
+                                     LostFocus="AutoValue_LostFocus" />
                         </Grid>
                         <Border Style="{StaticResource RowDividerStyle}" />
                         <Grid Margin="0,12">
@@ -185,7 +198,7 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                 <TextBlock Text="免 UAC 提权" Style="{StaticResource RowTitleStyle}" />
-                                <TextBlock Text="通过计划任务静默执行清理，不弹 UAC" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
+                                <TextBlock Text="通过常驻提权助手静默执行清理（首次启用请求一次管理员权限）" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
                             </StackPanel>
                             <ToggleButton Grid.Column="1" x:Name="SkipUacToggle" Style="{StaticResource SwitchStyle}"
                                           Click="SkipUac_Click" VerticalAlignment="Center" />

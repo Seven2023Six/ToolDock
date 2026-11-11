@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -345,7 +345,7 @@ public sealed class BatteryRow
         {
         }
 
-        string subText = $"{device.Protocol}{state}{remaining} · 更新于 {device.LastUpdated:HH:mm:ss}";
+        string subText = $"{ProtocolLabel(device.Protocol)}{state}{remaining} · 更新于 {device.LastUpdated:HH:mm:ss}";
 
         Color progressColor = !device.IsOnline
             ? Offline
@@ -407,6 +407,36 @@ public sealed class BatteryRow
 
     private static Color Tint(Color color, byte alpha = 0x28)
         => Color.FromArgb(alpha, color.R, color.G, color.B);
+
+    /// <summary>把内部协议标识换成界面可读文案，避免直接暴露 status-report7 之类英文。</summary>
+    private static string ProtocolLabel(string protocol)
+    {
+        if (string.IsNullOrWhiteSpace(protocol))
+        {
+            return "";
+        }
+        if (protocol.StartsWith("inphic-status-report", StringComparison.OrdinalIgnoreCase))
+        {
+            return "状态报文 " + protocol["inphic-status-report".Length..];
+        }
+        if (protocol.StartsWith("status-report", StringComparison.OrdinalIgnoreCase))
+        {
+            return "状态报文 " + protocol["status-report".Length..];
+        }
+        if (protocol.StartsWith("BLE GATT", StringComparison.OrdinalIgnoreCase))
+        {
+            return "低功耗蓝牙";
+        }
+        if (protocol.StartsWith("2.4G", StringComparison.OrdinalIgnoreCase))
+        {
+            return protocol;
+        }
+        if (protocol.Any(c => c > 0x7F))
+        {
+            return protocol; // 已含中文
+        }
+        return "厂商私有协议";
+    }
 
     private static Brush Frozen(Color color)
     {

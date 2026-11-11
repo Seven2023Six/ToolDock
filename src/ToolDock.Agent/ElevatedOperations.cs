@@ -1,5 +1,3 @@
-using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using ToolDock.Core;
@@ -7,42 +5,14 @@ using ToolDock.Core;
 namespace ToolDock.Agent;
 
 /// <summary>
-/// 提权动作：以管理员身份**再跑一遍本进程**时执行（计划任务安装/卸载、静默清理）。
+/// 提权动作：以管理员身份**再跑一遍本进程**时执行（常驻清理助手、静默清理）。
 /// 不再依赖独立的 ToolDock.ElevatedHelper.exe —— 未签名的独立小程序申请最高权限，
 /// 很容易被安全软件（卡巴斯基等）拦截甚至锁住文件；主程序已由用户信任，触发面更小。
 /// 这些模式必须在单实例检查之前处理：常驻 Agent 占着互斥量，提权副本不能因此退出。
 /// </summary>
 internal static class ElevatedOperations
 {
-    public const string TaskName = "ToolDock_Clean";
-    public const string TaskNameAuto = "ToolDock_CleanAuto";
-    public const string ManualArg = "--taskclean-manual";
-    public const string AutoArg = "--taskclean-auto";
-
-    /// <summary>创建手动/自动两个最高权限任务（任务命令行指向本程序，掩码运行时读取）。</summary>
-    public static int InstallTasks(string[] args)
-    {
-        string? outFile = GetArg(args, "-out");
-        string self = Environment.ProcessPath ?? "";
-        string err1 = CreateTask(TaskName, self, ManualArg, out bool ok1);
-        string err2 = CreateTask(TaskNameAuto, self, AutoArg, out bool ok2);
-        WriteInstallResult(outFile, ok1 && ok2,
-            ok1 && ok2 ? "" : $"任务创建失败（手动={ok1} 自动={ok2}）{err1}{err2}");
-        LogFile.Write($"[elevated] 计划任务安装：手动={ok1} 自动={ok2}{err1}{err2}");
-        return ok1 && ok2 ? 0 : 1;
-    }
-
-    public static int UninstallTasks(string[] args)
-    {
-        string? outFile = GetArg(args, "-out");
-        bool ok1 = DeleteTask(TaskName);
-        bool ok2 = DeleteTask(TaskNameAuto);
-        WriteInstallResult(outFile, ok1 && ok2, "");
-        LogFile.Write($"[elevated] 计划任务删除：手动={ok1} 自动={ok2}");
-        return ok1 && ok2 ? 0 : 1;
-    }
-
-    /// <summary>计划任务触发的静默清理：掩码从插件设置读取，改配置无需重建任务。</summary>
+    /// <summary>旧版计划任务的入口：仍保留，用于清理历史任务残留触发的调用。</summary>
     public static int CleanFromPlugin(bool auto)
     {
         try
@@ -71,24 +41,6 @@ internal static class ElevatedOperations
     {
         int i = Array.IndexOf(args, name);
         return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
-    }
-
-    /// <summary>
-    /// schtasks 命令行。触发器用「十年后一次」：永不自动触发、永不过期、/run 随时可调；
-    /// /sd 只认固定补零的 yyyy/MM/dd（zh-CN 的 yyyy/M/d 会被拒绝）。
-    /// </summary>
-    private static string CreateTask(string task, string self, string arguments, out bool ok)
-    {
-        string date = DateTime.Now.AddYears(10).ToString("yyyy/MM/dd", CultureInfo.InvariantCulture);
-        string args = $"/create /f /tn {task} /tr \"\\\"{self}\\\" {arguments}\" /sc once /sd {date} /st 00:00 /rl highest";
-        string stderr = Run("schtasks", args, out ok);
-        return ok ? "" : stderr;
-    }
-
-    private static bool DeleteTask(string task)
-    {
-        Run("schtasks", $"/delete /f /tn {task}", out bool ok);
-        return ok;
     }
 
     private static string PluginDataPath
@@ -149,56 +101,6 @@ internal static class ElevatedOperations
         catch
         {
             // 结果文件写不写都不影响清理本身
-        }
-    }
-
-    private static void WriteInstallResult(string? path, bool ok, string error)
-    {
-        if (path is null)
-        {
-            return;
-        }
-        try
-        {
-            File.WriteAllText(path, ok ? "ok=1" : "error=" + error);
-        }
-        catch
-        {
-        }
-    }
-
-    /// <summary>执行外部命令并返回真实退出码；先带超时等待，再收 stderr（避免子进程挂住时永久阻塞）。</summary>
-    private static string Run(string file, string arguments, out bool ok)
-    {
-        var psi = new ProcessStartInfo(file, arguments)
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardError = true,
-        };
-        try
-        {
-            using var process = Process.Start(psi);
-            if (process is null)
-            {
-                ok = false;
-                return "（进程启动失败）";
-            }
-            var stderrTask = process.StandardError.ReadToEndAsync();
-            if (!process.WaitForExit(30000))
-            {
-                try { process.Kill(entireProcessTree: true); } catch { }
-                ok = false;
-                return "schtasks: 执行超时（30 秒）";
-            }
-            string stderr = stderrTask.GetAwaiter().GetResult().Trim();
-            ok = process.ExitCode == 0;
-            return ok ? "" : "schtasks: " + (stderr.Length > 0 ? stderr.Split('\n')[0].Trim() : $"exit={process.ExitCode}");
-        }
-        catch (Exception exception)
-        {
-            ok = false;
-            return exception.Message;
         }
     }
 }

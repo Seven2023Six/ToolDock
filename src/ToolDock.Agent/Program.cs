@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text.Json;
 using ToolDock.Agent;
 using ToolDock.Core;
@@ -32,10 +32,8 @@ internal static class Program
         {
             switch (args[0].ToLowerInvariant())
             {
-                case "--install-task":
-                    return ElevatedOperations.InstallTasks(args);
-                case "--uninstall-task":
-                    return ElevatedOperations.UninstallTasks(args);
+                case "--clean-daemon":
+                    return CleanerDaemon.Run();
                 case "--taskclean-manual":
                     return ElevatedOperations.CleanFromPlugin(auto: false);
                 case "--taskclean-auto":
@@ -100,10 +98,14 @@ internal static class Program
 
         var plugins = new PluginHost();
         var memclean = new MemoryCleanPlugin();
+        var altsnap = new AltSnapPlugin();
+        var inputtip = new InputTipPlugin();
         plugins.Register(memclean);
+        plugins.Register(altsnap);
+        plugins.Register(inputtip);
         plugins.StartAll(_tray);
 
-        var pipeServer = new PipeServer(settings, Environment.ProcessPath ?? AppContext.BaseDirectory, _tray, memclean);
+        var pipeServer = new PipeServer(settings, Environment.ProcessPath ?? AppContext.BaseDirectory, _tray, memclean, altsnap, inputtip);
         var pipeTask = pipeServer.RunAsync(LifetimeCts.Token);
 
         LogFile.Write("[agent] 启动完成");

@@ -1,11 +1,12 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 namespace ToolDock.App.Services;
 
 /// <summary>物理内存快照：首页与内存清理页共用的读取助手（GlobalMemoryStatusEx）。</summary>
 internal static class SystemMemory
 {
-    public sealed record Snapshot(uint LoadPercent, double UsedGiB, double FreeGiB, double TotalGiB);
+    public sealed record Snapshot(uint LoadPercent, double UsedGiB, double FreeGiB, double TotalGiB,
+        double CommitUsedGiB, double CommitTotalGiB);
 
     public static Snapshot? Read()
     {
@@ -18,7 +19,9 @@ internal static class SystemMemory
             status.DwMemoryLoad,
             (status.UllTotalPhys - status.UllAvailPhys) / 1073741824.0,
             status.UllAvailPhys / 1073741824.0,
-            status.UllTotalPhys / 1073741824.0);
+            status.UllTotalPhys / 1073741824.0,
+            (status.UllTotalPageFile - status.UllAvailPageFile) / 1073741824.0,
+            status.UllTotalPageFile / 1073741824.0);
     }
 
     [StructLayout(LayoutKind.Sequential)]

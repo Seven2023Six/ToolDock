@@ -1,4 +1,4 @@
-<UserControl
+﻿<UserControl
     x:Class="ToolDock.App.Views.BatterySettingsView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -25,9 +25,9 @@
                             <TextBlock Text="启用外设电量显示工具" Style="{StaticResource RowTitleStyle}" />
                             <TextBlock Text="停用后「内置工具」里该卡片显示为已停用" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
                         </StackPanel>
-                        <CheckBox x:Name="ToolEnabledToggle" Grid.Column="1" VerticalAlignment="Center"
+                        <ToggleButton x:Name="ToolEnabledToggle" Grid.Column="1" VerticalAlignment="Center"
                                   AutomationProperties.Name="启用外设电量显示工具"
-                                  Style="{StaticResource WinUICheckBoxStyle}"
+                                  Style="{StaticResource SwitchStyle}"
                                   Checked="ToolEnabled_Changed" Unchecked="ToolEnabled_Changed" />
                     </Grid>
                 </Border>
@@ -88,8 +88,8 @@
                                 <TextBlock Text="监控本机电量" Style="{StaticResource RowTitleStyle}" />
                                 <TextBlock Text="把笔记本电池也列进设备列表" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
                             </StackPanel>
-                            <CheckBox x:Name="SystemBatteryToggle" Grid.Column="1" VerticalAlignment="Center"
-                                      Style="{StaticResource WinUICheckBoxStyle}" />
+                            <ToggleButton x:Name="SystemBatteryToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      Style="{StaticResource SwitchStyle}" />
                         </Grid>
                         <Border Style="{StaticResource RowDividerStyle}" />
                         <Grid Margin="0,12">
@@ -101,8 +101,8 @@
                                 <TextBlock Text="剩余可用时间估算" Style="{StaticResource RowTitleStyle}" />
                                 <TextBlock Text="在设备卡片细节行显示「约 N 小时剩余」" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
                             </StackPanel>
-                            <CheckBox x:Name="RemainingTimeToggle" Grid.Column="1" VerticalAlignment="Center"
-                                      Style="{StaticResource WinUICheckBoxStyle}" />
+                            <ToggleButton x:Name="RemainingTimeToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      Style="{StaticResource SwitchStyle}" />
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -119,8 +119,8 @@
                                 <TextBlock Text="启用任务栏电量贴片" Style="{StaticResource RowTitleStyle}" />
                                 <TextBlock Text="把电量贴片嵌进任务栏，随任务栏一起显示" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
                             </StackPanel>
-                            <CheckBox x:Name="PillToggle" Grid.Column="1" VerticalAlignment="Center"
-                                      Style="{StaticResource WinUICheckBoxStyle}" />
+                            <ToggleButton x:Name="PillToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      Style="{StaticResource SwitchStyle}" />
                         </Grid>
                         <Border Style="{StaticResource RowDividerStyle}" />
                         <Grid Margin="0,12">
@@ -162,7 +162,7 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                 <TextBlock Text="日志级别" Style="{StaticResource RowTitleStyle}" />
-                                <TextBlock Text="写入 vigiltwatt 日志的详细程度" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
+                                <TextBlock Text="写入 VigilWatt 日志的详细程度" Style="{StaticResource RowDescStyle}" Margin="0,2,0,0" />
                             </StackPanel>
                             <ComboBox x:Name="LogLevelBox" Grid.Column="1" Width="120" Height="32" VerticalContentAlignment="Center">
                                 <ComboBoxItem Content="调试" />

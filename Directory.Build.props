@@ -1,0 +1,11 @@
+<Project>
+
+  <!-- 工具箱统一版本号：Agent/App/Core/Abstractions/Contracts 共用。
+       InputTip 引擎有独立生命周期，在自身 csproj 里显式覆盖（1.0.0）。 -->
+  <PropertyGroup>
+    <Version>0.3.0</Version>
+    <Company>ToolDock</Company>
+    <Product>工具坞 ToolDock</Product>
+  </PropertyGroup>
+
+</Project>

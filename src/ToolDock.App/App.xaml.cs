@@ -44,7 +44,7 @@ public partial class App : Application
             // 全局状态（主题等）由常驻 Agent 拥有；Agent 不在（开发场景）则以独立模式跑
             var link = AgentLink.Instance;
             link.Connect(600);
-            StartupLog($"app: 管道握手完成 Connected={link.Connected} Duplicate={link.DuplicateRequested} Theme={link.WelcomeTheme}");
+            StartupLog($"app: 管道握手完成 Connected={link.Connected} Duplicate={link.DuplicateRequested} Ver={link.AgentProtocolVersion} Theme={link.WelcomeTheme}");
             if (link.DuplicateRequested)
             {
                 Shutdown(); // 已有界面窗口，Agent 已让它置前
@@ -75,11 +75,20 @@ public partial class App : Application
             {
                 Services.MemoryPillService.OpenMemCleanPage = () => ShowMainWindow("memclean");
                 Services.MemoryPillService.Instance.Start();
-                Services.AltSnapService.StartIfEnabled();
             }
             catch (Exception exception)
             {
                 StartupLog("app: 内存贴片启动失败 " + exception.Message);
+            }
+
+            // MAS 内置脚本部署到 %APPDATA%（缺失才复制，不影响「检查更新」写回的副本）
+            try
+            {
+                Services.MasService.EnsureLocalScript();
+            }
+            catch (Exception exception)
+            {
+                StartupLog("app: MAS 脚本部署失败 " + exception.Message);
             }
 
             AgentLink.ActivateRequested += () => ShowMainWindow();
@@ -138,7 +147,9 @@ public partial class App : Application
             var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "ToolDock", "logs");
             Directory.CreateDirectory(dir);
-            File.AppendAllText(Path.Combine(dir, $"app-{DateTime.Now:yyyyMMdd}.log"),
+            string path = Path.Combine(dir, $"app-{DateTime.Now:yyyyMMdd}.log");
+            Core.LogRotation.Prepare(path);
+            File.AppendAllText(path,
                 $"{DateTime.Now:HH:mm:ss.fff} {line}{Environment.NewLine}");
         }
         catch
@@ -151,7 +162,6 @@ public partial class App : Application
     {
         // 电量监听（BLE/经典蓝牙/HID 轮询）随即关闭，不留在后台占资源
         try { Services.MemoryPillService.Instance.Stop(); } catch { }
-        try { Services.AltSnapService.Stop(); } catch { }
         Services.BatteryMonitor.Instance.Dispose();
         AgentLink.Instance.Dispose();
         base.OnExit(e);

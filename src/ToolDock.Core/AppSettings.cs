@@ -29,7 +29,7 @@ public sealed class AppSettings
     /// <summary>内存清理：定时清理间隔分钟。</summary>
     public uint AutoCleanIntervalMinutes { get; set; } = 30;
 
-    /// <summary>内存清理：免 UAC 计划任务开关。</summary>
+    /// <summary>内存清理：免 UAC 提权助手开关。</summary>
     public bool AutoCleanSkipUac { get; set; }
 
     /// <summary>内存清理：自动清理时包含冻结区（对齐 Mem Reduct IsAllowStandbyListCleanup，默认 false）。</summary>

@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.IO.Pipes;
 using System.Windows;
 using ToolDock.Core;
@@ -21,6 +21,9 @@ internal sealed class AgentLink : IDisposable
     public static AgentLink Instance { get; } = new();
 
     public bool Connected { get; private set; }
+
+    /// <summary>Agent 上报的协议版本（握手时记录；仅用于诊断与日志）。</summary>
+    public int AgentProtocolVersion { get; private set; }
 
     /// <summary>true = Agent 报告已有界面窗口，本实例应立即退出。</summary>
     public bool DuplicateRequested { get; private set; }
@@ -47,6 +50,31 @@ internal sealed class AgentLink : IDisposable
     public uint CurrentHotkeyVk { get; set; } = 0x70;
     public bool CurrentLogResults { get; set; }
 
+    /// <summary>最近一次清理结果（welcome 下发，仅用于界面展示）。</summary>
+    public ulong CurrentLastCleanFreed { get; set; }
+    public string CurrentLastCleanAt { get; set; } = "";
+    public int CurrentLastCleanFailed { get; set; }
+
+    // ---- 内置窗口拖拽（AltSnap 引擎 v0.1）----
+    public bool CurrentAltSnapEnabled { get; set; } = true;
+    public bool CurrentAltSnapRunning { get; set; }
+    public string CurrentAltSnapIniPath { get; set; } = "";
+    public string CurrentAltSnapEngine { get; set; } = "";
+
+    /// <summary>Agent 下发窗口拖拽配置（页面加载后异步填充）。</summary>
+    public static event Action? AltSnapUpdated;
+
+    // ---- 内置输入法状态提示（InputTip 引擎 v1.0）----
+    public bool CurrentInputTipEnabled { get; set; } = true;
+    public bool CurrentInputTipRunning { get; set; }
+    public bool CurrentInputTipPaused { get; set; }
+    public string CurrentInputTipState { get; set; } = "";
+    public string CurrentInputTipConfigPath { get; set; } = "";
+    public string CurrentInputTipEngine { get; set; } = "";
+
+    /// <summary>Agent 下发输入法提示状态（页面加载后异步填充）。</summary>
+    public static event Action? InputTipUpdated;
+
     /// <summary>Agent 下发的窗口材质（连接成功时有效），随设置变更更新。</summary>
     public string CurrentBackdrop { get; set; } = "Mica";
 
@@ -55,6 +83,10 @@ internal sealed class AgentLink : IDisposable
 
     private readonly SemaphoreSlim _writeGate = new(1, 1);
     private NamedPipeClientStream? _pipe;
+    private System.Threading.Timer? _heartbeat;
+    private DateTime _lastActivity = DateTime.MinValue;
+    private int _reconnecting;
+    private bool _disposed;
 
     public void Connect(int timeoutMilliseconds)
     {
@@ -66,7 +98,7 @@ internal sealed class AgentLink : IDisposable
             // 握手放到线程池并有界等待：绝不让 UI 线程无限等 IO
             var handshake = Task.Run(async () =>
             {
-                await PipeFrame.WriteAsync(pipe, new PipeMessage { T = "hello", Ver = 1 }, CancellationToken.None)
+                await PipeFrame.WriteAsync(pipe, new PipeMessage { T = "hello", Ver = PipeProtocol.Version }, CancellationToken.None)
                     .ConfigureAwait(false);
                 return await PipeFrame.ReadAsync(pipe, CancellationToken.None).ConfigureAwait(false);
             });
@@ -91,6 +123,8 @@ internal sealed class AgentLink : IDisposable
 
             _pipe = pipe;
             Connected = true;
+            AgentProtocolVersion = welcome.Ver;
+            _lastActivity = DateTime.UtcNow;
             WelcomeTheme = welcome.Theme;
             CurrentBackdrop = welcome.Backdrop ?? "Mica";
             CurrentAutoStart = welcome.AutoStart;
@@ -106,7 +140,13 @@ internal sealed class AgentLink : IDisposable
             CurrentHotkeyMods = welcome.HotkeyMods;
             CurrentHotkeyVk = welcome.HotkeyVk;
             CurrentLogResults = welcome.LogResults;
+            CurrentLastCleanFreed = welcome.LastCleanFreed;
+            CurrentLastCleanAt = welcome.LastCleanAt ?? "";
+            CurrentLastCleanFailed = welcome.LastCleanFailed;
+            ApplyAltSnap(welcome);
+            ApplyInputTip(welcome);
             _ = ReadLoopAsync(pipe);
+            StartHeartbeat();
         }
         catch (TimeoutException)
         {
@@ -251,7 +291,7 @@ internal sealed class AgentLink : IDisposable
         });
     }
 
-    /// <summary>免 UAC 计划任务开关下发 Agent。</summary>
+    /// <summary>免 UAC 提权助手开关下发 Agent。</summary>
     public void SendSkipUac(bool enabled)
     {
         if (!Connected || _pipe is null)
@@ -428,6 +468,203 @@ internal sealed class AgentLink : IDisposable
         });
     }
 
+    /// <summary>请求 Agent 下发当前窗口拖拽配置（页面打开时调用）。</summary>
+    public void RequestAltSnap() => SendAltSnapMessage(new PipeMessage { T = "getAltSnap" });
+
+    /// <summary>请求 Agent 下发当前输入法提示状态。</summary>
+    public void RequestInputTip() => SendInputTipMessage(new PipeMessage { T = "getInputTip" });
+
+    /// <summary>设置已写入磁盘：让 Agent 重载输入法提示引擎。</summary>
+    public void SendInputTipRestart()
+        => SendInputTipMessage(new PipeMessage { T = "restartInputTip" });
+
+    public void SendInputTipEnabled(bool enabled)
+        => SendInputTipMessage(new PipeMessage { T = "setInputTipEnabled", Enable = enabled });
+
+    public void SendInputTipPaused(bool paused)
+        => SendInputTipMessage(new PipeMessage { T = "setInputTipPaused", Enable = paused });
+
+    public void SendInputTipAction(string trigger)
+        => SendInputTipMessage(new PipeMessage { T = "inputTipAction", Text = trigger });
+
+    private void SendInputTipMessage(PipeMessage message)
+    {
+        if (!Connected || _pipe is null)
+        {
+            return;
+        }
+        var pipe = _pipe;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _writeGate.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    await PipeFrame.WriteAsync(pipe, message, CancellationToken.None).ConfigureAwait(false);
+                }
+                finally
+                {
+                    _writeGate.Release();
+                }
+            }
+            catch (Exception exception) when (exception is IOException or InvalidOperationException or ObjectDisposedException)
+            {
+                Connected = false;
+            }
+        });
+    }
+
+    private void ApplyInputTip(PipeMessage message)
+    {
+        CurrentInputTipEnabled = message.InputTipEnabled;
+        CurrentInputTipRunning = message.InputTipRunning;
+        CurrentInputTipPaused = message.InputTipPaused;
+        CurrentInputTipState = message.InputTipState ?? "";
+        CurrentInputTipConfigPath = message.InputTipConfigPath ?? "";
+        CurrentInputTipEngine = message.InputTipEngine ?? "";
+    }
+
+    /// <summary>配置文件已写入：让 Agent 重启内置引擎重新读取。</summary>
+    public void SendAltSnapRestart()
+        => SendAltSnapMessage(new PipeMessage { T = "restartAltSnap" });
+
+    /// <summary>只切换总开关（不等待保存按钮）。</summary>
+    public void SendAltSnapEnabled(bool enabled)
+        => SendAltSnapMessage(new PipeMessage { T = "setAltSnapEnabled", Enable = enabled });
+
+    private void SendAltSnapMessage(PipeMessage message)
+    {
+        if (!Connected || _pipe is null)
+        {
+            return;
+        }
+        var pipe = _pipe;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _writeGate.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    await PipeFrame.WriteAsync(pipe, message, CancellationToken.None).ConfigureAwait(false);
+                }
+                finally
+                {
+                    _writeGate.Release();
+                }
+            }
+            catch (Exception exception) when (exception is IOException or InvalidOperationException or ObjectDisposedException)
+            {
+                Connected = false;
+            }
+        });
+    }
+
+    private void ApplyAltSnap(PipeMessage message)
+    {
+        CurrentAltSnapEnabled = message.AltSnapEnabled;
+        CurrentAltSnapRunning = message.AltSnapRunning;
+        CurrentAltSnapIniPath = message.AltSnapIniPath ?? "";
+        CurrentAltSnapEngine = message.AltSnapEngine ?? "";
+    }
+
+    // ---- 心跳与重连 ----
+    // Agent 重启/崩溃后，读循环会自然结束，但写操作可能静默失败；
+    // 心跳每 10 秒探活，35 秒无任何回包视为断线，随后每 10 秒尝试重连一次。
+
+    private void StartHeartbeat()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+        _heartbeat?.Dispose();
+        _heartbeat = new System.Threading.Timer(_ => HeartbeatTick(), null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
+    }
+
+    private void HeartbeatTick()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+        if (!Connected)
+        {
+            TryReconnect();
+            return;
+        }
+        if (DateTime.UtcNow - _lastActivity > TimeSpan.FromSeconds(35))
+        {
+            Connected = false;
+            var stale = _pipe;
+            _pipe = null;
+            try
+            {
+                stale?.Dispose();
+            }
+            catch
+            {
+                // 已释放
+            }
+            TryReconnect();
+            return;
+        }
+        SendPing();
+    }
+
+    private void TryReconnect()
+    {
+        if (_disposed || Interlocked.CompareExchange(ref _reconnecting, 1, 0) != 0)
+        {
+            return;
+        }
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                Connect(500);
+            }
+            catch
+            {
+                Connected = false;
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _reconnecting, 0);
+            }
+        });
+    }
+
+    private void SendPing()
+    {
+        var pipe = _pipe;
+        if (pipe is null)
+        {
+            return;
+        }
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _writeGate.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    await PipeFrame.WriteAsync(pipe, new PipeMessage { T = "ping", Ver = PipeProtocol.Version }, CancellationToken.None)
+                        .ConfigureAwait(false);
+                }
+                finally
+                {
+                    _writeGate.Release();
+                }
+            }
+            catch (Exception exception) when (exception is IOException or InvalidOperationException or ObjectDisposedException)
+            {
+                Connected = false;
+            }
+        });
+    }
+
     /// <summary>监听 Agent 推送：activate = 托盘又点了一次"打开"，把已有窗口置前。</summary>
     private async Task ReadLoopAsync(NamedPipeClientStream pipe)
     {
@@ -439,6 +676,11 @@ internal sealed class AgentLink : IDisposable
                 if (message is null)
                 {
                     break;
+                }
+                _lastActivity = DateTime.UtcNow;
+                if (message.T == "pong")
+                {
+                    continue; // 心跳回包，无业务语义
                 }
                 if (message.T == "shutdown")
                 {
@@ -460,11 +702,27 @@ internal sealed class AgentLink : IDisposable
                         }
                     });
                 }
+                if (message.T == "cleanState")
+                {
+                    CurrentLastCleanFreed = message.LastCleanFreed;
+                    CurrentLastCleanAt = message.LastCleanAt ?? "";
+                    CurrentLastCleanFailed = message.LastCleanFailed;
+                }
                 if (message.T == "skipUac")
                 {
                     // Agent 侧安装失败回退时推回真实状态，界面开关跟着复位
                     CurrentSkipUac = message.Enable;
                     Application.Current?.Dispatcher.BeginInvoke(() => SkipUacChanged?.Invoke(message.Enable));
+                }
+                if (message.T == "altSnap")
+                {
+                    ApplyAltSnap(message);
+                    Application.Current?.Dispatcher.BeginInvoke(() => AltSnapUpdated?.Invoke());
+                }
+                if (message.T == "inputTip")
+                {
+                    ApplyInputTip(message);
+                    Application.Current?.Dispatcher.BeginInvoke(() => InputTipUpdated?.Invoke());
                 }
             }
             Connected = false;
@@ -477,6 +735,9 @@ internal sealed class AgentLink : IDisposable
 
     public void Dispose()
     {
+        _disposed = true;
+        _heartbeat?.Dispose();
+        _heartbeat = null;
         Connected = false;
         _pipe?.Dispose();
         _pipe = null;

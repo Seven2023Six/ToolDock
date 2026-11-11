@@ -193,7 +193,9 @@ internal static class LogFile
             Directory.CreateDirectory(dir);
             lock (Gate)
             {
-                File.AppendAllText(Path.Combine(dir, $"agent-{DateTime.Now:yyyyMMdd}.log"),
+                string path = Path.Combine(dir, $"agent-{DateTime.Now:yyyyMMdd}.log");
+                LogRotation.Prepare(path);
+                File.AppendAllText(path,
                     $"{DateTime.Now:HH:mm:ss.fff} {line}{Environment.NewLine}");
             }
         }

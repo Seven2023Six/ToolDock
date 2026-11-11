@@ -1,8 +1,9 @@
-# .NET 构建产物
+﻿# .NET 构建产物
 bin/
 obj/
 .vs/
 publish/
+publish_*/
 *.user
 *.suo
 

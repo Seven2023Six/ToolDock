@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using ToolDock.App.Services;
@@ -75,6 +75,26 @@ public partial class MemCleanPage : UserControl
         UsedColumn.Width = new System.Windows.GridLength(memory.LoadPercent, System.Windows.GridUnitType.Star);
         FreeColumn.Width = new System.Windows.GridLength(100 - memory.LoadPercent, System.Windows.GridUnitType.Star);
         MemFootnoteText.Text = $"已用 {memory.UsedGiB:0.0} / {memory.TotalGiB:0.0} GB";
+        GroupsText.Text = $"提交内存 {memory.CommitUsedGiB:0.0} / {memory.CommitTotalGiB:0.0} GB";
+        LastCleanText.Text = FormatLastClean();
+    }
+
+    /// <summary>上次清理摘要：时间 + 释放量 + 失败项（来自 Agent 的 welcome/回推）。</summary>
+    private static string FormatLastClean()
+    {
+        var link = AgentLink.Instance;
+        if (string.IsNullOrEmpty(link.CurrentLastCleanAt))
+        {
+            return "上次清理：尚未清理";
+        }
+        string failed = link.CurrentLastCleanFailed > 0 ? $"（{link.CurrentLastCleanFailed} 项失败）" : "";
+        return $"上次清理：{link.CurrentLastCleanAt} 释放 {FormatBytes(link.CurrentLastCleanFreed)}{failed}";
+    }
+
+    private static string FormatBytes(ulong bytes)
+    {
+        double gib = bytes / 1073741824.0;
+        return gib >= 0.1 ? $"{gib:0.0} GB" : $"{bytes / 1048576.0:0} MB";
     }
 
     private void LoadState()
@@ -135,8 +155,7 @@ public partial class MemCleanPage : UserControl
         }
 
         SetRegionCheckboxes(mask);
-        ThresholdToggle.IsChecked = auto_clean;
-        IntervalToggle.IsChecked = auto_clean;
+        AutoCleanToggle.IsChecked = auto_clean;
         ThresholdBox.Text = threshold.ToString();
         IntervalBox.Text = interval.ToString();
         SkipUacToggle.IsChecked = skip_uac;
@@ -181,7 +200,7 @@ public partial class MemCleanPage : UserControl
     }
 
     private bool ReadAutoCleanEnabled()
-        => ThresholdToggle.IsChecked == true || IntervalToggle.IsChecked == true;
+        => AutoCleanToggle.IsChecked == true;
 
     private uint ReadThreshold()
         => uint.TryParse(ThresholdBox.Text, out var v) && v is >= 50 and <= 99 ? v : 90u;
@@ -213,6 +232,8 @@ public partial class MemCleanPage : UserControl
             IntervalBox.Text = interval.ToString();
         }
 
+        // 设置归属：Agent 连接时由 Agent 独占写入 plugindata/memclean.json；
+        // 本地 settings.json 只在独立模式（Agent 不在）下作为兜底，避免两边各写一份产生分叉。
         if (AgentLink.Instance.Connected)
         {
             AgentLink.Instance.SendCleanCfg(mask, auto_clean, threshold, interval, allow_freezes, confirm_clean, bubble_results, log_results);
@@ -291,15 +312,14 @@ public partial class MemCleanPage : UserControl
         if (AgentLink.Instance.Connected)
         {
             AgentLink.Instance.SendHotkey(enabled, mods, vk);
+            return;
         }
-        else
-        {
-            var settings = Core.AppSettings.Load();
-            settings.HotkeyCleanEnabled = enabled;
-            settings.HotkeyCleanMods = mods;
-            settings.HotkeyCleanVk = vk;
-            settings.Save();
-        }
+
+        var settings = Core.AppSettings.Load();
+        settings.HotkeyCleanEnabled = enabled;
+        settings.HotkeyCleanMods = mods;
+        settings.HotkeyCleanVk = vk;
+        settings.Save();
     }
 
     private void Bubble_Click(object sender, RoutedEventArgs e) => SendConfig();
@@ -317,8 +337,7 @@ public partial class MemCleanPage : UserControl
 
         _syncing = true;
         SetRegionCheckboxes(CleanupCore.MaskDefault);
-        ThresholdToggle.IsChecked = false;
-        IntervalToggle.IsChecked = false;
+        AutoCleanToggle.IsChecked = false;
         ThresholdBox.Text = "90";
         IntervalBox.Text = "30";
         AllowFreezesToggle.IsChecked = false;
@@ -347,13 +366,15 @@ public partial class MemCleanPage : UserControl
         if (_syncing)
             return;
 
-        if (sender == ThresholdToggle && ThresholdToggle.IsChecked == true && IntervalToggle.IsChecked != true)
-        {
-            _syncing = true;
-            IntervalToggle.IsChecked = true;
-            _syncing = false;
-        }
         SendConfig();
+    }
+
+    private void AutoValue_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (!_syncing)
+        {
+            SendConfig();
+        }
     }
 
     private void SkipUac_Click(object sender, RoutedEventArgs e)
@@ -364,14 +385,14 @@ public partial class MemCleanPage : UserControl
         bool enabled = SkipUacToggle.IsChecked == true;
         if (AgentLink.Instance.Connected)
         {
+            // 由 Agent 安装/停止提权助手并落盘，真实状态会经 skipUac 推送回来
             AgentLink.Instance.SendSkipUac(enabled);
+            return;
         }
-        else
-        {
-            var settings = Core.AppSettings.Load();
-            settings.AutoCleanSkipUac = enabled;
-            settings.Save();
-        }
+
+        var settings = Core.AppSettings.Load();
+        settings.AutoCleanSkipUac = enabled;
+        settings.Save();
     }
 
     private void AllowFreezes_Click(object sender, RoutedEventArgs e)

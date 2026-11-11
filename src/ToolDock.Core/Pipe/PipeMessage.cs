@@ -32,7 +32,7 @@ public sealed class PipeMessage
     /// <summary>定时清理间隔分钟（welcome / settings / setCleanCfg）。</summary>
     public uint IntervalM { get; set; } = 30;
 
-    /// <summary>免 UAC 计划任务开关（welcome / settings / setCleanCfg）。</summary>
+    /// <summary>免 UAC 提权助手开关（welcome / settings / setCleanCfg）。</summary>
     public bool SkipUac { get; set; }
 
     /// <summary>自动清理时包含冻结区（备用/已修改列表）。对齐 Mem Reduct IsAllowStandbyListCleanup，默认 false（welcome / setCleanCfg）。</summary>
@@ -59,6 +59,15 @@ public sealed class PipeMessage
     /// <summary>把清理结果写入日志（welcome / setCleanCfg）。</summary>
     public bool LogResults { get; set; }
 
+    /// <summary>最近一次清理释放的字节数（welcome / settings，仅展示用）。</summary>
+    public ulong LastCleanFreed { get; set; }
+
+    /// <summary>最近一次清理时间（MM-dd HH:mm，空 = 本次会话尚未清理）。</summary>
+    public string? LastCleanAt { get; set; }
+
+    /// <summary>最近一次清理中失败的区域数。</summary>
+    public int LastCleanFailed { get; set; }
+
     /// <summary>通知标题（notify）。</summary>
     public string? Title { get; set; }
 
@@ -73,6 +82,40 @@ public sealed class PipeMessage
 
     /// <summary>true = 静默清理：本次不弹任何气泡（仍记录日志）。</summary>
     public bool Silent { get; set; }
+
+    // ---- 窗口拖拽（内置 AltSnap 引擎，v0.1）----
+
+    /// <summary>窗口拖拽总开关（welcome / settings / altSnap / setAltSnapEnabled）。</summary>
+    public bool AltSnapEnabled { get; set; } = true;
+
+    /// <summary>引擎当前是否在运行（welcome / settings / altSnap）。</summary>
+    public bool AltSnapRunning { get; set; }
+
+    /// <summary>AltSnap.ini 的完整路径（welcome / settings / altSnap）。</summary>
+    public string? AltSnapIniPath { get; set; }
+
+    /// <summary>内置引擎版本（welcome / settings / altSnap）。</summary>
+    public string? AltSnapEngine { get; set; }
+
+    // ---- 输入法状态提示（内置 InputTip 引擎，v0.1）----
+
+    /// <summary>输入法提示总开关（welcome / settings / inputTip / setInputTipEnabled）。</summary>
+    public bool InputTipEnabled { get; set; } = true;
+
+    /// <summary>引擎当前是否在运行（welcome / settings / inputTip）。</summary>
+    public bool InputTipRunning { get; set; }
+
+    /// <summary>是否处于暂停（托盘菜单/规则切换）。</summary>
+    public bool InputTipPaused { get; set; }
+
+    /// <summary>当前输入法状态：CN/EN/Caps/US/JP/KR。</summary>
+    public string? InputTipState { get; set; }
+
+    /// <summary>输入法提示配置文件路径。</summary>
+    public string? InputTipConfigPath { get; set; }
+
+    /// <summary>内置引擎版本。</summary>
+    public string? InputTipEngine { get; set; }
 }
 
 /// <summary>内存清理插件的持久化设置（plugindata/memclean.json，键为 PascalCase）。供免 UAC 助手运行时读取掩码，任务因此只需安装一次。</summary>

@@ -1,5 +1,6 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using ToolDock.App.Services;
 using ToolDock.App.Views;
 
@@ -8,6 +9,7 @@ namespace ToolDock.App;
 public partial class MainWindow : Window
 {
     private readonly Dictionary<string, Control> _pageCache = new();
+    private bool _syncingNav;
 
     public MainWindow()
     {
@@ -88,10 +90,19 @@ public partial class MainWindow : Window
         base.OnClosed(e);
     }
 
+    private void Nav_Click(object sender, RoutedEventArgs e)
+    {
+        // 重复点击当前分节：即使 IsChecked 没变化，也回到该分节的根页面
+        if (!_syncingNav && sender is RadioButton { CommandParameter: string key })
+        {
+            ShowPage(key);
+        }
+    }
+
     private void Nav_Checked(object sender, RoutedEventArgs e)
     {
-        // XAML 里 IsChecked="True" 会在 InitializeComponent 期间触发本事件，此时页面表还没建好
-        if (_pageCache.Count == 0)
+        // 键盘方向键/UIA 选中也会走到这里；初始化期间页面表还没建好
+        if (_pageCache.Count == 0 || _syncingNav)
         {
             return;
         }
@@ -113,6 +124,8 @@ public partial class MainWindow : Window
                 "builtin" => new BuiltinToolsPage(),
                 "utility" => new UtilityToolsPage(),
                 "altsnap" => new AltSnapPage(),
+                "inputtip" => new InputTipPage(),
+                "mas" => new MasPage(),
                 "memclean" => new MemCleanPage(),
                 "custom" => new CustomToolsPage(),
                 "settings" => new SettingsPage(),
@@ -126,7 +139,53 @@ public partial class MainWindow : Window
         }
         if (page is not null)
         {
+            SyncSidebar(key);
             PageHost.Content = page;
         }
+    }
+
+    /// <summary>让侧栏高亮与实际页面一致：工具子页归到「内置工具」，避免从首页进入工具后返回错页。</summary>
+    private void SyncSidebar(string key)
+    {
+        string? nav = key switch
+        {
+            "home" => "home",
+            "builtin" or "memclean" or "battery" or "altsnap" or "inputtip" or "mas" => "builtin",
+            "utility" => "utility",
+            "custom" => "custom",
+            "settings" => "settings",
+            "about" => "about",
+            _ => null,
+        };
+        if (nav is null)
+        {
+            return;
+        }
+        var radio = FindNav(this, nav);
+        if (radio is not null && radio.IsChecked != true)
+        {
+            _syncingNav = true;
+            radio.IsChecked = true;
+            _syncingNav = false;
+        }
+    }
+
+    private static RadioButton? FindNav(DependencyObject root, string key)
+    {
+        int count = VisualTreeHelper.GetChildrenCount(root);
+        for (int i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is RadioButton { CommandParameter: string parameter } radio && parameter == key)
+            {
+                return radio;
+            }
+            var nested = FindNav(child, key);
+            if (nested is not null)
+            {
+                return nested;
+            }
+        }
+        return null;
     }
 }
